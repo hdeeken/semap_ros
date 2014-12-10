@@ -1,13 +1,25 @@
 <package>
   <description brief="spatial_db_ros">
 
-     spatial_db_ros
+     This packages provides a ROS wrapper around the functionality of the spatial_db package. It's services make the database usable in ROS.
 
   </description>
   <author>hdeeken</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/spatial_db_ros</url>
+
+  <depend package="rospy"/>
+  <depend package="roslib"/>
+  <depend package="tf"/>
+  <depend package="geometry_msgs"/>
+  <depend package="shape_msgs"/>
+  <depend package="visualization_msgs"/>
+  <depend package="spatial_db"/>
+  <depend package="spatial_db_msgs"/>
+  <depend package="rviz_spatial_db_plugin"/>
+
+  <rosdep name="python-sqlalchemy" />
 
 </package>
 
