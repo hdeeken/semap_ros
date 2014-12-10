@@ -1,0 +1,14 @@
+<package>
+  <description brief="spatial_db_ros">
+
+     spatial_db_ros
+
+  </description>
+  <author>hdeeken</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/spatial_db_ros</url>
+
+</package>
+
+
