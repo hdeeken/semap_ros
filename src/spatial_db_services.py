@@ -11,7 +11,7 @@ from geoalchemy2.elements import WKTElement, WKBElement, RasterElement, Composit
 from geoalchemy2.functions import ST_Distance, ST_AsText
 from postgis_functions import *
 
-from db_environment import Session
+from db_environment import db
 from db_model import *
 
 from geometry_msgs.msg import Point as ROSPoint
@@ -40,7 +40,6 @@ tf_broadcaster = None
 publisher = None
 
 def create_mesh_model_from_file(req):
-    session = Session()
     print req.path
     model = GeometryModel()
     model.type = "Imported Mesh"
@@ -49,8 +48,8 @@ def create_mesh_model_from_file(req):
     object = ObjectDescription()
     object.type = req.type
     object.geometry_models.append(model)
-    session.add(object)
-    session.commit()
+    db().add(object)
+    db().commit()
     return
 
 def create_root_frame(req):
@@ -61,32 +60,29 @@ def create_root_frame(req):
     return
 
 def add_object_descriptions(req):
-    session = Session()
     for desc in req.descriptions:
       print desc.type, 'will be added'
       object = ObjectDescription()
       object.fromROS(desc)
-      session.add(object)
-    session.commit()
+      db().add(object)
+    db().commit()
     return
 
 def add_object_instances(req):
-    session = Session()
     print 'add', len(req.objects), 'objects into db'
     for obj in req.objects:
       object = ObjectInstance()
       object.fromROS(obj)
       print 'now i add'
-      session.add(object)
-    session.commit()
+      db().add(object)
+    db().commit()
     print 'everything was alright'
     res = AddObjectInstancesResponse()
     return res
 
 def get_all_object_instances(req):
-    session = Session()
     res = GetAllObjectInstancesResponse()
-    db_objects = session.query(ObjectInstance)
+    db_objects = db().query(ObjectInstance)
     for db_object in db_objects:
       print db_object
       ros_object = db_object.toROS()
