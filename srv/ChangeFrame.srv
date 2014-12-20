@@ -1,0 +1,5 @@
+int32 id
+string frame
+bool keep_transform
+---
+
