@@ -17,7 +17,6 @@
   <depend package="visualization_msgs"/>
   <depend package="spatial_db"/>
   <depend package="spatial_db_msgs"/>
-  <depend package="rviz_spatial_db_plugin"/>
 
   <rosdep name="python-sqlalchemy" />
 
