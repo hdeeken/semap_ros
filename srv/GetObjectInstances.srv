@@ -1,5 +1,3 @@
-## optional filter by...
-string[] names
-string[] types
+int32[] ids
 ---
 spatial_db_msgs/ObjectInstance[] objects
