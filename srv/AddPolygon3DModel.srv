@@ -1,0 +1,4 @@
+int32 id
+spatial_db_msgs/Polygon3DModel model
+---
+
