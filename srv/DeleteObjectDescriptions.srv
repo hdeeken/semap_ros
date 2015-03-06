@@ -1,0 +1,5 @@
+int32[] ids  # descriptions to be deleted
+bool keep_instances # if instances are not kept, their children will be keep and redirected by to thier parent, if they are kept you can choose:
+int32 new_desc_id # optional: to reset them to the given description, if none is set they will set to have no description
+---
+int32[] ids # affected object_instances

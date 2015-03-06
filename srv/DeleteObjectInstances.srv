@@ -1,0 +1,6 @@
+int32[] ids
+bool keep_children # if children are kept, they get get by default reset to the objects parent
+string child_frame # optional: reset to the given child_frame
+bool keep_transform # optional: choose to keep the transform while changing frame
+---
+int32[] ids

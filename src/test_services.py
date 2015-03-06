@@ -70,7 +70,7 @@ if __name__ == "__main__":
   print 'Testing SpatialDB Services -- BEGINS'
 
   test_add_dummy_descriptions()
-  add_root_frame("world2")
+  add_root_frame("world")
 
   #test_add_dummy_instances()
 
@@ -81,8 +81,10 @@ if __name__ == "__main__":
   #change_frame(16, "world", True)
 
   #get_all_object_instances()
-  add_object_instances([create_object_instance("world", [[0,0,6], [0,0,0,1]], "geo2", get_object_description_id("Geometry").id)])
-  #add_object_instances([create_object_instance("world", [[-10,0,6], [0,0,0,1]], "787", get_object_description_id("Geometry").id)])
+  #add_object_instances([create_object_instance("world", [[0,0,6], [0,0,0,1]], "test_geo", get_object_description_id("Geometry").id)])
+  add_object_instances([create_object_instance("world", [[4,0,4], [0,0,0,1]], "teste", get_object_description_id("Geometry").id)])
+  add_object_instances([create_object_instance("world", [[0,0,0], [0,0,0,1]], "wussel", get_object_description_id("Wuson").id)])
+  #add_object_instances([create_object_instance("world", [[5,0,-6], [0,0,0,1]], "wussek", get_object_description_id("Wuson").id)])
   #activate_all_object_instances()
 
   print 'Testing SpatialDB Services -- DONE'

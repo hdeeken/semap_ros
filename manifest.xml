@@ -18,7 +18,8 @@
   <depend package="spatial_db"/>
   <depend package="spatial_db_msgs"/>
 
-  <rosdep name="python-sqlalchemy" />
+  <depend package="python_qt_binding"/>
+  <depend package="rviz"/>
 
 </package>
 
