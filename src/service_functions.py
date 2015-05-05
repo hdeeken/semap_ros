@@ -6,10 +6,13 @@ SpatialDB Service Calls
 
 import roslib; roslib.load_manifest('spatial_db_ros')
 import rospy
+from sqlalchemy import exc
+
 from db_model import *
 from db_environment import db
 from spatial_db.ros_postgis_conversion import *
 from spatial_db_ros.srv import *
+from spatial_db_msgs.msg import ObjectDescription as ROSObjectDescription
 from spatial_db_msgs.msg import ObjectInstance as ROSObjectInstance
 from visualization_msgs.msg import MarkerArray
 
@@ -29,7 +32,7 @@ def list_object_descriptions():
      print id, type
 
 def add_object_descriptions(req):
-  rospy.loginfo("SpatialDB SRVs: added object instances")
+  rospy.loginfo("SpatialDB SRVs: add object descriptions")
   res = AddObjectDescriptionsResponse()
   for desc in req.descriptions:
     object = ObjectDescription()
@@ -38,6 +41,7 @@ def add_object_descriptions(req):
     db().flush()
     res.ids.append(object.id)
   db().commit()
+  rospy.loginfo("SpatialDB SRVs: add object descriptions - DONE")
   return res
 
 def get_object_descriptions(req):
@@ -289,16 +293,12 @@ def get_object_instances(req):
     then = rospy.Time.now()
     res = GetObjectInstancesResponse()
     objects = db().query(ObjectInstance).filter(ObjectInstance.id.in_(req.ids)).all()
-    #rospy.loginfo("Get DB takes %f seconds" % (rospy.Time.now() - then).to_sec())
     for obj in objects:
-          print
-          rospy.loginfo("%s" % obj.name)
           then2 = rospy.Time.now()
           ros = obj.toROS()
           res.objects.append(ros)
-          rospy.loginfo("%f seconds" % (rospy.Time.now() - then2).to_sec())
-          print
-    rospy.loginfo("Took %f seconds" % (rospy.Time.now() - then).to_sec())
+          rospy.loginfo("Object in %r seconds" % ((rospy.Time.now() - then2).to_sec()))
+    rospy.loginfo("Get Objects took %f seconds in total." % (rospy.Time.now() - then).to_sec())
     return res
 
 def switch_object_descriptions(req):
@@ -324,13 +324,28 @@ def get_object_instances_list(req):
 def get_object_descriptions_list(req):
     rospy.loginfo("SpatialDB SRVs: get_object_descriptions_list")
     res = GetObjectDescriptionsListResponse()
-    types = db().query(ObjectDescription.type).all()
-    descriptions = db().query(ObjectDescription.id, ObjectDescription.type).all()
-    for id, type in descriptions:
-      desc = ROSObjectDescription()
-      desc.id = id
-      desc.type = type
-      res.descriptions.append(desc)
+    rospy.loginfo("before SpatialDB SRVs: get_object_descriptions_list")
+    descriptions =[]
+    #import logging
+    try:
+      descriptions = db().query(ObjectDescription.id, ObjectDescription.type).all()
+
+      for id, type in descriptions:
+        desc = ROSObjectDescription()
+        desc.id = id
+        desc.type = type
+        res.descriptions.append(desc)
+
+      rospy.loginfo("return proper res")
+      return res
+
+    except exc.SQLAlchemyError, e:
+        if len(descriptions) == 0:
+          rospy.loginfo("no desc found")
+        rospy.loginfo("sql error %s" % e)
+        rospy.loginfo('got %d descriptions' % len(descriptions))
+
+    rospy.loginfo("return empty res")
     return res
 
 def copy_object_instances(req):
@@ -341,7 +356,7 @@ def copy_object_instances(req):
     # and just add them again
 
     for obj in get_res.objects:
-      obj.alias = "Copy of " + obj.alias
+      obj.alias = "Copy of " + obj.name
 
     add_req = AddObjectInstancesRequest()
     add_req.objects = get_res.objects
@@ -355,11 +370,11 @@ def get_all_object_instances(req):
   rospy.loginfo("SpatialDB SRVs: get_all_object_instances")
   then = rospy.Time.now()
   res = GetAllObjectInstancesResponse()
-  objects = db().query(ObjectInstance)
-  rospy.loginfo("Get DB takes %f seconds" % (rospy.Time.now() - then).to_sec())
+  objects = db().query(ObjectInstance).all()
+  rospy.loginfo("Get All Objects from DB took %f seconds" % (rospy.Time.now() - then).to_sec())
   for obj in objects:
     res.objects.append(obj.toROS())
-  rospy.loginfo("Total %f seconds" % (rospy.Time.now() - then).to_sec())
+  rospy.loginfo("Get All Objects as ROS took %f seconds" % (rospy.Time.now() - then).to_sec())
   return res
 
 ### Spatial Relations
@@ -491,6 +506,15 @@ def update_geometry_model_pose(req):
   res = UpdateGeometryModelPose()
   model = db().query(GeometryModel).filter(GeometryModel.id == req.id).one()
   model.pose.appendROSPose(req.pose)
+  db().commit()
+  return res
+
+def update_and_transform_geometry_model_pose(req):
+  rospy.loginfo("SpatialDB SRVs: update_geometry_model_pose")
+  res = UpdateGeometryModelPose()
+  model = db().query(GeometryModel).filter(GeometryModel.id == req.id).one()
+  model.pose.appendROSPose(req.pose)
+  model.geometry.appendROSPose(req.pose)
   db().commit()
   return res
 

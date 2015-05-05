@@ -290,10 +290,10 @@ def call_copy_object_descriptions(ids):
 def call_get_object_instances(ids):
   try:
     rospy.wait_for_service('get_all_object_instances')
-    get_object_instances_call = rospy.ServiceProxy('get_object_instances', GetObjectInstances)
+    call = rospy.ServiceProxy('get_object_instances', GetObjectInstances)
     request = GetObjectInstancesRequest()
     request.ids = ids
-    response = get_object_instances_call(request)
+    response = call(request)
     print 'GetObjectInstances service call succeeded!'
     return response
   except rospy.ServiceException as e:
