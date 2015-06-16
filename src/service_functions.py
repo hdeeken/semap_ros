@@ -548,6 +548,109 @@ def get_frame_names(req):
     res.frames.append(str(name[0]))
   return res
 
+### Tests
+from sqlalchemy.orm import aliased
+#>>> adalias1 = aliased(Address)
+#>>> adalias2 = aliased(Address)
+#sql
+#>>> for username, email1, email2 in \
+#...     session.query(User.name, adalias1.email_address, adalias2.email_address).\
+#...     join(adalias1, User.addresses).\
+#...     join(adalias2, User.addresses).\
+#...     filter(adalias1.email_address=='jack@google.com').\
+#...     filter(adalias2.email_address=='j25@yahoo.com'):
+#...     print username, email1, email2
+
+def test_retrieval(req):
+    rospy.loginfo("SpatialDB SRVs: test_retrieval")
+    then = rospy.Time.now()
+
+    origin = WKTElement('POINT(%f %f %f)' % (0.0, 0.0, 0.0))
+    #print 'disttest', db().query(ObjectInstance).filter(ObjectInstance.test(origin) ).all()
+
+    # laeuft
+    print 'disttest', db().query(ObjectInstance.id).filter( ST_Distance( ObjectInstance.tester(), WKTElement('POINT(1.0 0.0 0.0)') ) > 0).all()
+
+    #print 'disttest', db().query(ObjectInstance.id).filter( ST_Distance( ObjectInstance.tester2(), WKTElement('POINT(1.0 0.0 0.0)') ) > 0).all()
+    #print 'disttest', db().query(ObjectInstance.id).filter(ST_Distance( WKTElement('POINT(1.0 0.0 0.0)'), WKTElement('POINT(1.0 0.0 0.0)') ) > 0).all()
+    #obj1.id, obj2.id).filter( db().execute( ST_DWithin( obj1.getAPosition2D() , obj2.getAPosition2D(), 20.0) ) ): #ST_DWithin( obj1.getAPosition2D() , obj2.getAPosition2D(), 2.0 )
+    #dat = db().exists().where( db().execute( ST_Within( origin , ObjectInstance.getAPosition2D() ) ) )
+    #obj_within_range = db().query(ObjectInstance).filter(ST_Within( origin , ObjectInstance.getAPosition2D) ).all()
+
+    print 'disttest', db().query(ObjectInstance, ObjectInstance.frame).filter( ST_Distance( ObjectInstance.tester2(), WKTElement('POINT(1.0 0.0 0.0)') ) > 0).all()
+
+def test_object_instances(req):
+    rospy.loginfo("SpatialDB SRVs: test_object_instances")
+    then = rospy.Time.now()
+    res = GetObjectInstancesResponse()
+    objects = db().query(ObjectInstance).filter(ObjectInstance.id.in_(req.ids)).all()
+
+    for obj in objects:
+      then2 = rospy.Time.now()
+
+      #print 'coll',  obj.object_description.getGeometryCollection()
+      #print 'coll aT', obj.object_description.getGeometryCollection( as_text = True )
+
+      #print 'box', obj.object_description.getBoundingBox()
+      #print 'box aT', obj.object_description.getBoundingBox( as_text = True )
+
+      #print 'box2d', obj.object_description.getBox2D()
+      #print 'box3d', obj.object_description.getBox3D()
+      #print 'box3d mesh', box3DtoPolygonMesh( obj.object_description.getBox3D() )
+
+      #print 'ch2d', obj.object_description.getConvexHull2D()
+      #print 'ch2dt', obj.object_description.getConvexHull2D(True)
+
+
+      pos2D = obj.getAPosition2D()
+      pos3D = obj.getAPosition3D()
+      print 'pos2D', db().execute( ST_AsText( obj.getAPosition2D() ) ).scalar()
+      print 'pos3D', db().execute( ST_AsText( obj.getAPosition3D() ) ).scalar()
+      #geom2D_1 = obj.getAConvexHull2D()
+      geom2D_1 = origin
+      #obj.getABox2D()
+      #geom2D_2 = obj.getABox2D()
+      geom2D_2 = obj.getAConvexHull2D()
+      geom2D_2 = pos2D
+
+      #geom3D_1 = obj.getAConvexHull3D()
+      geom3D_1 = origin
+      #geom3D_1 = origin
+      #geom3D_2 = obj.getABox3D()
+      #geom3D_2 = obj.getAConvexHull3D()
+      geom3D_2 = pos3D
+
+      print '## 2D ##'
+
+      print '2d distance', db().execute( ST_Distance( geom2D_2 , geom2D_1) ).scalar()
+      print '2d in range', db().execute( ST_DWithin( geom3D_1 , geom3D_2, 0.0) ).scalar()
+      # no fully within 2D geometry fzunc
+      #print '2d fully in range', db().execute( ST_DFullyWithin( geom3D_1 , geom3D_2, 4.0) ).scalar()
+
+      print '2d within', db().execute( ST_Within( geom2D_1 , geom2D_2) ).scalar()
+      print '2d contains', db().execute( ST_Contains( geom2D_1 , geom2D_2) ).scalar()
+
+      print '2d touches', db().execute( ST_Touches( geom2D_1 , geom2D_2) ).scalar()
+      print '2d intersects', db().execute( ST_Intersects( geom2D_1 , geom2D_2) ).scalar()
+      print '2d disjoint', db().execute( ST_Disjoint( geom2D_1 , geom2D_2) ).scalar()
+
+      print '## 3D ##'
+      print 'in range', db().execute( ST_3DDWithin( geom3D_1 , geom3D_2, 0.0) ).scalar()
+      print 'fully in range', db().execute( ST_3DDFullyWithin( geom3D_1 , geom3D_2, 4.0) ).scalar()
+
+      print 'min distance', db().execute( ST_3DDistance( geom3D_1 , geom3D_2 ) ).scalar()
+      print 'max distance', db().execute( ST_3DMaxDistance( geom3D_1 , geom3D_2 ) ).scalar()
+
+      print 'min line', db().execute( ST_AsText( ST_3DShortestLine( geom3D_1 , geom3D_2 ) ) ).scalar()
+      print 'max line', db().execute( ST_AsText( ST_3DLongestLine( geom3D_1 , geom3D_2 ) ) ).scalar()
+
+      #print ' OTHER '
+      #print 'skeleton', db().execute( ST_AsText( ST_StraightSkeleton( geom2D_1 ) ) ).scalar()
+      #print 'skeleton', db().execute( ST_AsText( ST_StraightSkeleton( geom3D_1 ) ) ).scalar()
+
+    rospy.loginfo("Get Test took %f seconds in total." % (rospy.Time.now() - then).to_sec())
+    return res
+
 ### DB Maintainance
 
 def db_truncate_tables(req):
