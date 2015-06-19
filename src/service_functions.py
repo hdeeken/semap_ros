@@ -153,6 +153,7 @@ def delete_object_instances(req):
                 frame_req.frame = obj.frame.parent.name
               frame_req.keep_transform = req.keep_transform
               change_frame(frame_req)
+        obj.deleteAbsoluteDescription()
         db().delete(obj.frame)
         res.ids.append(obj.id)
         db().delete(obj)
@@ -296,6 +297,7 @@ def get_object_instances(req):
     for obj in objects:
           then2 = rospy.Time.now()
           ros = obj.toROS()
+          print 'load', ros.absolute.type
           res.objects.append(ros)
           rospy.loginfo("Object in %r seconds" % ((rospy.Time.now() - then2).to_sec()))
     rospy.loginfo("Get Objects took %f seconds in total." % (rospy.Time.now() - then).to_sec())
@@ -549,7 +551,7 @@ def get_frame_names(req):
   return res
 
 ### Tests
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, join
 #>>> adalias1 = aliased(Address)
 #>>> adalias2 = aliased(Address)
 #sql
@@ -562,14 +564,55 @@ from sqlalchemy.orm import aliased
 #...     print username, email1, email2
 
 def test_retrieval(req):
-    rospy.loginfo("SpatialDB SRVs: test_retrieval")
+    rospy.loginfo("SpatialDB SRVs: test_distance")
     then = rospy.Time.now()
 
     origin = WKTElement('POINT(%f %f %f)' % (0.0, 0.0, 0.0))
-    #print 'disttest', db().query(ObjectInstance).filter(ObjectInstance.test(origin) ).all()
+
+    geo0 = aliased(GeometryModel)
+    geo1 = aliased(GeometryModel)
+    obj1 = aliased(ObjectInstance)
+    obj2 = aliased(ObjectInstance)
+
+    anyobj =  db().query( geo0.geometry ).filter( geo0.type == "Body", obj1.absolute_description_id == geo0.object_description_id ).label( "any" )
+    res0 =  db().query( geo0.geometry ).filter( obj1.id == 2, geo0.type == "Body", obj1.absolute_description_id == geo0.object_description_id ).label( "res0" )
+    res1 =  db().query( geo1.geometry ).filter( obj2.id == 3, geo1.type == "Body", obj2.absolute_description_id == geo1.object_description_id ).label( "res1" )
+
+    root_dist = SFCGAL_Distance3D( origin, res0 ).label("root_dist")
+    in_root_range = db().query( obj1.id, root_dist ).filter(root_dist > 2.0)
+    print in_root_range.all()
+    
+    #obj_dist = SFCGAL_Distance3D( res0, res1 ).label("obj_dist")
+    #in_obj_range = db().query( obj1.id, obj2.id, obj_dist ).filter(obj_dist > 0.0)
+    #print in_obj_range.all()
+
+    intersects = db().query( obj1.id, obj2.id, SFCGAL_Intersects3D( res0, res1 ) ).filter(obj1.id != obj2.id)
+    print intersects.all()
+
+    #dist = db().query( obj1.id,  ).filter(SFCGAL_Distance3D( WKTElement('POINT(%f %f %f)' % (0.0, 0.0, 0.0)), res0 ) > 2.0)#.label("dist")
+    #inrange = db().query( obj1 ).filter( SFCGAL_Distance3D( WKTElement('POINT(%f %f %f)' % (0.0, 0.0, 0.0)), res0 ) > 2.0 )#.label("dist")
+    
+    #inrange = db().query( obj1.id).filter( dist > 0.0).all()
+    #print dist
+    #for o in dist:
+    #  print o
+    
+    #resres0 =  db().query(geo0.geometry).select_from(join(geo0, ObjectInstance)).filter( ObjectInstance.id == 3, ObjectInstance.absolute_description_id == GeometryModel.object_description_id).all()
+    #
+    #print 'frist', len(resres0)
+    
+    #for g in resres0:
+      #print db().execute( ST_AsText(g) ).scalar()
+      #print i.name, g.type
+    #print 'second'
+    #for i, g in res1:
+      #print i.name, g.type
+
+    
+    #print 'disttest', db().query( ST_Distance( resres0, WKTElement('POINT(1.0 0.0 0.0)') ) ).scalar()
 
     # laeuft
-    print 'disttest', db().query(ObjectInstance.id).filter( ST_Distance( ObjectInstance.tester(), WKTElement('POINT(1.0 0.0 0.0)') ) > 0).all()
+   ## print 'disttest', db().query(ObjectInstance.id).filter( ST_Distance( ObjectInstance.tester(), WKTElement('POINT(1.0 0.0 0.0)') ) > 0).all()
 
     #print 'disttest', db().query(ObjectInstance.id).filter( ST_Distance( ObjectInstance.tester2(), WKTElement('POINT(1.0 0.0 0.0)') ) > 0).all()
     #print 'disttest', db().query(ObjectInstance.id).filter(ST_Distance( WKTElement('POINT(1.0 0.0 0.0)'), WKTElement('POINT(1.0 0.0 0.0)') ) > 0).all()
@@ -577,7 +620,20 @@ def test_retrieval(req):
     #dat = db().exists().where( db().execute( ST_Within( origin , ObjectInstance.getAPosition2D() ) ) )
     #obj_within_range = db().query(ObjectInstance).filter(ST_Within( origin , ObjectInstance.getAPosition2D) ).all()
 
-    print 'disttest', db().query(ObjectInstance, ObjectInstance.frame).filter( ST_Distance( ObjectInstance.tester2(), WKTElement('POINT(1.0 0.0 0.0)') ) > 0).all()
+   ## print 'disttest', db().query(ObjectInstance, ObjectInstance.frame).filter( ST_Distance( ObjectInstance.tester2(), WKTElement('POINT(1.0 0.0 0.0)') ) > 0).all()
+    return GetObjectInstancesResponse()
+
+def test_create_absolute_description(req):
+    rospy.loginfo("SpatialDB SRVs: test_create_absolute_description")
+    then = rospy.Time.now()
+    res = GetObjectInstancesResponse()
+    objects = db().query(ObjectInstance).filter(ObjectInstance.id.in_(req.ids)).all()
+
+    for obj in objects:
+      print "Create Absolute for", obj.name
+      obj.createAbsoluteDescription()
+
+    return res
 
 def test_object_instances(req):
     rospy.loginfo("SpatialDB SRVs: test_object_instances")
@@ -600,7 +656,6 @@ def test_object_instances(req):
 
       #print 'ch2d', obj.object_description.getConvexHull2D()
       #print 'ch2dt', obj.object_description.getConvexHull2D(True)
-
 
       pos2D = obj.getAPosition2D()
       pos3D = obj.getAPosition3D()

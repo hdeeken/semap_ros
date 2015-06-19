@@ -69,7 +69,7 @@ def spatial_db_services():
   srv_db_drop_tables = rospy.Service('db_drop_tables', DBDropTables, db_drop_tables)
 
   ## Tests
-
+  srv_test_create_absolute_description = rospy.Service('test_create_absolute_description', GetObjectInstances, test_create_absolute_description)
   srv_test_retrieval = rospy.Service('test_retrieval', GetObjectInstances, test_retrieval)
   srv_test_object_instances = rospy.Service('test_object_instances', GetObjectInstances, test_object_instances)
   srv_unary_relation_test = rospy.Service('unary_relation_test', UnaryRelationTest, unary_relation_test)

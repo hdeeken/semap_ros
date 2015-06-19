@@ -283,7 +283,6 @@ def call_copy_object_descriptions(ids):
     call = rospy.ServiceProxy('copy_object_descriptions', CopyObjectDescriptions)
     response = call(request)
     print 'CopyObjectDescriptions service call succeeded!'
-    return response
   except rospy.ServiceException as e:
     return None, "CopyObjectDescriptions service call failed: %s" % e
 
