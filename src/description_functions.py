@@ -11,6 +11,7 @@ from spatial_db_ros.srv import *
 from spatial_db.ros_postgis_conversion import *
 from spatial_db_msgs.msg import ObjectDescription as ROSObjectDescription
 
+from instance_functions import *
 '''
 SEMAP  Object Descriptions Services
 '''
@@ -53,9 +54,6 @@ def delete_object_descriptions( req ):
               objects = db().query( ObjectInstance ).filter( ObjectInstance.id.in_( inst_ids ) ).all()
               for obj in objects:
                 obj.description_id = None
-      for model in desc.geometry_models:
-        db().delete( model.pose )
-        db().delete( model )
       db().delete( desc )
     db().commit()
   return res
