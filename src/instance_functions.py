@@ -16,7 +16,7 @@ SEMAP Object Instances Services
 ## Setter
 
 def add_object_instances( req ):
-  rospy.loginfo( "SEMAP DB SRVs: add_object_instances"
+  rospy.loginfo( "SEMAP DB SRVs: add_object_instances" )
   res = AddObjectInstancesResponse()
   for obj in req.objects:
     object = ObjectInstance( obj )
