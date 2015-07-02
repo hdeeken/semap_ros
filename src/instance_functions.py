@@ -5,13 +5,12 @@ import roslib; roslib.load_manifest( 'spatial_db_ros' )
 
 from db_model import *
 from db_environment import db
-from spatial_db.ros_postgis_conversion import *
 from spatial_db_ros.srv import *
-from spatial_db_msgs.msg import ObjectDescription as ROSObjectDescription
+from spatial_db.ros_postgis_conversion import *
 from spatial_db_msgs.msg import ObjectInstance as ROSObjectInstance
 
 '''
-SEMAP DB Services for Object Instances
+SEMAP Object Instances Services
 '''
 
 ## Setter
@@ -105,12 +104,14 @@ def get_object_instances_list( req ):
   return res
 
 def list_object_instances():
+  rospy.loginfo( "SEMAP DB SRVs: list_object_instances" )
   objects = db().query( ObjectInstance ).all()
   print "Available ObjectInstances"
   for obj in objects:
     print 'id:', obj.id, 'name:', obj.name, 'aka:', obj.alias, 'type:', obj.object_description.type
 
 def copy_object_instances( req ):
+  rospy.loginfo( "SEMAP DB SRVs: copy_object_instances" )
   # get all objects to be copied
   get_req = GetObjectInstancesRequest()
   get_req.ids = req.ids
