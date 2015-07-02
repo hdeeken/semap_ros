@@ -1,17 +1,25 @@
 #!/usr/bin/env python
 
+import rospy
 import roslib; roslib.load_manifest('spatial_db_ros')
 
-import rospy
-
 from spatial_db_ros.srv import *
-from service_functions import *
+
+from tf_functions import *
+from test_functions import *
+from database_functions import *
+from instance_functions import *
+from description_functions import *
 
 from db_environment import db, initializeConnection
 
+'''
+SEMAP DB Services
+'''
+
 def spatial_db_services():
 
-  rospy.init_node('spatial_db_services')
+  rospy.init_node('semap_db_services')
 
   user = rospy.get_param('~user')
   password = rospy.get_param('~password')
@@ -75,7 +83,7 @@ def spatial_db_services():
   srv_unary_relation_test = rospy.Service('unary_relation_test', UnaryRelationTest, unary_relation_test)
   srv_binary_relation_test = rospy.Service('binary_relation_test', BinaryRelationTest, binary_relation_test)
 
-  print "SpatialDB Services are online."
+  print "SEMAP DB Services are online."
   rospy.spin()
 
 if __name__ == "__main__":
