@@ -88,14 +88,14 @@ def rename_object_description( req ):
 # getter
 
 def get_object_descriptions( req ):
-    rospy.loginfo( "SEMAP DB SRVs: get_object_descriptions" )
-    then = rospy.Time.now()
-    res = GetObjectDescriptionsResponse()
-    descriptions = db().query( ObjectDescription ).filter( ObjectDescription.id.in_( req.ids ) ).all()
-    for desc in descriptions:
-      res.descriptions.append( desc.toROS() )
-    rospy.loginfo( "Took %f seconds" % ( rospy.Time.now() - then).to_sec() )
-    return res
+  rospy.loginfo( "SEMAP DB SRVs: get_object_descriptions" )
+  then = rospy.Time.now()
+  res = GetObjectDescriptionsResponse()
+  descriptions = db().query( ObjectDescription ).filter( ObjectDescription.id.in_( req.ids ) ).all()
+  for desc in descriptions:
+    res.descriptions.append( desc.toROS() )
+  rospy.loginfo( "Took %f seconds" % ( rospy.Time.now() - then).to_sec() )
+  return res
 
 def get_all_object_descriptions( req ):
   rospy.loginfo( "SEMAP DB SRVs: get all object descriptions" )
