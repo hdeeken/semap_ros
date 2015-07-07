@@ -79,6 +79,7 @@ def spatial_db_services():
   ## Tests
   srv_test_create_absolute_description = rospy.Service( 'test_create_absolute_description', GetObjectInstances, test_create_absolute_description )
   srv_test_retrieval = rospy.Service( 'test_retrieval', GetObjectInstances, test_retrieval )
+  srv_test_ecmr = rospy.Service( 'test_ecmr', GetObjectInstances, test_ecmr )
   srv_test_object_instances = rospy.Service( 'test_object_instances', GetObjectInstances, test_object_instances )
   srv_unary_relation_test = rospy.Service( 'unary_relation_test', UnaryRelationTest, unary_relation_test )
   srv_binary_relation_test = rospy.Service( 'binary_relation_test', BinaryRelationTest, binary_relation_test )

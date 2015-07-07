@@ -122,7 +122,7 @@ def test_retrieval( req ):
   root_dist = SFCGAL_Distance3D( origin, res0 ).label( "root_dist" )
   in_root_range = db().query( obj1.id, root_dist ).filter( root_dist > 2.0 )
   print in_root_range.all()
-  
+
   #obj_dist = SFCGAL_Distance3D( res0, res1 ).label( "obj_dist" )
   #in_obj_range = db().query( obj1.id, obj2.id, obj_dist ).filter( obj_dist > 0.0 )
   #print in_obj_range.all()
@@ -132,16 +132,16 @@ def test_retrieval( req ):
 
   #dist = db().query( obj1.id,  ).filter( SFCGAL_Distance3D( WKTElement( 'POINT( %f %f %f )' % ( 0.0, 0.0, 0.0 ) ), res0 ) > 2.0 )#.label( "dist" )
   #inrange = db().query( obj1 ).filter( SFCGAL_Distance3D( WKTElement( 'POINT( %f %f %f )' % ( 0.0, 0.0, 0.0 ) ), res0 ) > 2.0 )#.label( "dist" )
-  
+
   #inrange = db().query( obj1.id ).filter( dist > 0.0 ).all()
   #print dist
   #for o in dist:
   #  print o
-  
+
   #resres0 =  db().query( geo0.geometry ).select_from( join( geo0, ObjectInstance ) ).filter( ObjectInstance.id == 3, ObjectInstance.absolute_description_id == GeometryModel.object_description_id ).all()
   #
   #print 'frist', len( resres0 )
-  
+
   #for g in resres0:
     #print db().execute( ST_AsText( g ) ).scalar()
     #print i.name, g.type
@@ -245,3 +245,118 @@ def test_object_instances( req ):
 
   rospy.loginfo( "Get Test took %f seconds in total." % ( rospy.Time.now() - then ).to_sec() )
   return res
+
+
+def any_obj_type(obj, type):
+  desc = aliased( ObjectDescription )
+  return db().query( obj ).filter( obj.relative_description_id == desc.id, desc.type == type )
+
+def any_obj_type_ids(obj, type):
+  desc = aliased( ObjectDescription )
+  return db().query( obj.id ).filter( obj.relative_description_id == desc.id, desc.type == type )
+
+def obj_geo(obj_id, geo, type):
+  return db().query( geo.id ).filter( and_(ObjectInstance.id == obj_id, ObjectInstance.absolute_description_id == geo.abstraction_desc, geo.type == "Position3D") )
+
+def obj_geo_ids(obj, geo, type):
+  return db().query( geo ).filter( and_(obj.absolute_description_id == geo.abstraction_desc, geo.type == type))
+
+def test_ecmr( req ):
+  rospy.loginfo( "SEMAP DB SRVs: test_ecmr" )
+  then = rospy.Time.now()
+
+  origin = WKTElement( 'POINT( %f %f %f )' % ( 0.0, 0.0, 0.0 ) )
+
+  geo1 = aliased( GeometryModel )
+  obj1 = aliased( ObjectInstance )
+  desc1 = aliased( ObjectDescription )
+  geo3 = aliased( GeometryModel )
+
+  obj2 = aliased( ObjectInstance )
+  desc2 = aliased( ObjectDescription )
+  geo2 = aliased( GeometryModel )
+  geo4 = aliased( GeometryModel )
+
+  print "All Pots"
+  for obj in any_obj_type(obj1, "Pot").all():
+    print obj.name
+
+  print "All Fuus"
+  for obj in any_obj_type(obj2, "Fuu").all():
+    print obj.name
+
+  pairs = db().query( obj1, obj2, ST_3DDistance(geo1.geometry, geo2.geometry) ).filter( \
+                                                                                                  obj1.id.in_( any_obj_type_ids(obj1, "Pot") ) , \
+                                                                                                  obj2.id.in_( any_obj_type_ids(obj2, "Fuu") ),  \
+                                                                                                  obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == "Position3D", \
+                                                                                                  obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "Position3D", \
+                                                                                                  obj1.absolute_description_id == geo3.abstraction_desc, geo3.type == "FootprintBox", \
+                                                                                                  obj2.absolute_description_id == geo4.abstraction_desc, geo4.type == "FootprintBox", \
+                                                                                                  ST_3DDistance(geo1.geometry, geo2.geometry) < 1.0, \
+                                                                                                  ST_Intersects(geo3.geometry, geo4.geometry) )
+
+
+  print 'Pot / Foo / MinDist, / MaxDist'
+
+  for p, f, dist in pairs.all():
+    print p.name, f.name, dist
+
+  pairs2 =  db().query( obj1, obj2, ST_3DDistance(geo1.geometry, geo2.geometry) ).filter(  \
+                                                                                                  obj1.relative_description_id == desc1.id, desc1.type == "Pot", \
+                                                                                                  obj2.relative_description_id == desc2.id, desc2.type == "Fuu", \
+                                                                                                  obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == "Position3D", \
+                                                                                                  obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "Position3D", \
+                                                                                                  obj1.absolute_description_id == geo3.abstraction_desc, geo3.type == "FootprintBox", \
+                                                                                                  obj2.absolute_description_id == geo4.abstraction_desc, geo4.type == "FootprintBox", \
+                                                                                                  ST_3DDistance(geo1.geometry, geo2.geometry) < 1.0, \
+                                                                                                  ST_Intersects(geo3.geometry, geo4.geometry) )
+
+
+  print 'Pot / Foo / MinDist, / MaxDist'
+
+  for p, f, dist in pairs2.all():
+    print p.name, f.name, dist
+
+#  pairs3 = obj_geo( obj2.id, geo1, "Position3D" )
+
+ # for p in pairs3:
+  #  print p.type, p.id
+
+  pairs4 = db().query( obj1, geo1, obj2, geo2, SFCGAL_Distance3D( geo1.geometry, geo2.geometry ) > 1.0).filter(
+
+                                      obj1.id.in_( any_obj_type_ids( obj1, "Pot" ) ),
+                                      geo1.id.in_( obj_geo( obj1.id, geo1, "Position3D" ) ),
+                                      obj2.id.in_( any_obj_type_ids( obj2, "Fuu" ) ),
+                                      geo2.id.in_( obj_geo( obj2.id, geo2, "Position3D" ) ),
+                                      )
+                                     #obj2.id.in_( any_obj_type_ids( obj2, "Fuu" ) ).label("second") , \
+                                     #obj1.id == obj2.id  )#, \
+                                     #geo2.id.in_( obj_geo_ids( obj2, geo2, "Position3D" ) ) )
+                                     #obj_geo( obj1.id, geo2, "Position3D" ).label("secondg") ) #, \
+                                     #SFCGAL_Distance3D( geo1.geometry, geo2.geometry ) > 3.5)
+
+
+   ## , SFCGAL_Distance3D( obj_geo(obj1.id, geo1, "Position3D").label("obj_geo1"), obj_geo(obj2.id, geo1, "Position3D").label("obj_geo2") ) > 1.0)
+
+  for o1, g1, o2, g2, d in pairs4.all():
+    print 'Pot', o1.id, o1.name, g1.id, g1.type
+    print 'Foo', o2.id, o2.name, g2.id, g2.type
+    print 'Dist', d
+ # res0 =  db().query( geo0.geometry ).filter( obj1.id == 2, geo0.type == "Body", obj1.absolute_description_id == geo0.object_description_id ).label( "res0" )
+ # res1 =  db().query( geo1.geometry ).filter( obj2.id == 3, geo1.type == "Body", obj2.absolute_description_id == geo1.object_description_id ).label( "res1" )
+
+  #root_dist = SFCGAL_Distance3D( origin, res0 ).label( "root_dist" )
+
+
+  #print dists.all()
+  #for d in dists.all():
+  #  print d
+
+  #print in_root_range.all()
+
+  #obj_dist = SFCGAL_Distance3D( res0, res1 ).label( "obj_dist" )
+  #in_obj_range = db().query( obj1.id, obj2.id, obj_dist ).filter( obj_dist > 0.0 )
+  #print in_obj_range.all()
+
+  #intersects = db().query( obj1.id, obj2.id, SFCGAL_Intersects3D( res0, res1 ) ).filter( obj1.id != obj2.id )
+  #print intersects.all()
