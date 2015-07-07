@@ -387,6 +387,7 @@ def call_set_geometry_model_pose(id, pose):
     call = rospy.ServiceProxy('set_geometry_model_pose', SetGeometryModelPose)
     request = SetGeometryModelPoseRequest()
     request.id = id
+    request.type = type
     request.pose = pose
     response = call(request)
     print 'SetGeometryModelPose service call succeeded!'

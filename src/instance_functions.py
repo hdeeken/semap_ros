@@ -24,6 +24,7 @@ def add_object_instances( req ):
     db().flush()
     res.ids.append( object.id )
   db().commit()
+  call_update_absolute_description(res.ids)
   return res
 
 def rename_object_instance( req ):
@@ -41,6 +42,7 @@ def switch_object_descriptions( req ):
   for obj in objects:
     obj.object_description_id = req.desc_id
   db().commit()
+  call_update_absolute_description(res.obj_ids)
   return res
 
 def delete_object_instances( req ):
@@ -67,7 +69,6 @@ def delete_object_instances( req ):
               frame_req.frame = obj.frame.parent.name
             frame_req.keep_transform = req.keep_transform
             change_frame(frame_req)
-      obj.deleteAbsoluteDescription()
       db().delete( obj.frame )
       res.ids.append( obj.id )
       db().delete( obj )
@@ -145,6 +146,7 @@ def update_transform( req ):
   res = UpdateTransformResponse()
   object = db().query( ObjectInstance ).filter( ObjectInstance.id == req.id ).one()
   object.frame.appendROSPose( req.pose )
+
   db().commit()
   return res
 
@@ -154,6 +156,7 @@ def set_transform( req ):
   object = db().query( ObjectInstance ).filter(ObjectInstance.id == req.id).scalar()
   object.frame.setROSPose(req.pose)
   db().commit()
+  call_update_absolute_description( [ req.id ] )
   return res
 
 def change_frame( req ):
@@ -162,14 +165,19 @@ def change_frame( req ):
   object = db().query( ObjectInstance ).filter( ObjectInstance.id == req.id ).scalar()
   object.frame.changeFrame( req.frame, req.keep_transform )
   db().commit()
+  call_update_absolute_description( [ req.id ] )
   return res
 
-def test_create_absolute_description( req ):
-    rospy.loginfo( "SEMAP DB SRVs: test_create_absolute_description" )
+def update_absolute_description( req ):
+    rospy.loginfo( "SEMAP DB SRVs: update_absolute_description" )
     then = rospy.Time.now()
     res = GetObjectInstancesResponse()
     objects = db().query( ObjectInstance ).filter( ObjectInstance.id.in_( req.ids ) ).all()
     for obj in objects:
-      print "Create Absolute for", obj.name
-      obj.createAbsoluteDescription()
+      obj.updateAbsoluteDescription()
     return res
+
+def call_update_absolute_description(ids):
+  update_req = GetObjectInstancesRequest()
+  update_req.ids = ids
+  update_absolute_description(update_req)
