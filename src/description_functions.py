@@ -101,7 +101,7 @@ def get_object_descriptions( req ):
 def get_all_object_descriptions( req ):
   rospy.loginfo( "SEMAP DB SRVs: get all object descriptions" )
   res = GetAllObjectDescriptionResponse()
-  descriptions = db().query( ObjectDescription ).all()
+  descriptions = db().query( ObjectDescription ).filter( ObjectDescription.id != ObjectInstance.absolute_description_id).all()
   for description in descriptions:
     res.descriptions.append( description.toROS() )
   return res
@@ -121,7 +121,8 @@ def list_object_descriptions():
 def get_geometry_model_types( req ):
   rospy.loginfo( "SEMAP DB SRVs: get_geometry_model_types" )
   res = GetGeometryModelTypesResponse()
-  types = db().query( GeometryModel.type ).all()
+  abstractions_types = ['Position2D', 'Position3D', 'AxisAligned2D', 'AxisAligned3D', 'FootprintBox', 'FootprintHull', 'BoundingBox', 'BoundingHull']
+  types = db().query( GeometryModel.type ).distinct().filter( ~GeometryModel.type.in_(abstractions_types) ).all()
   for t in types:
     res.types.append( t[0] )
   return res
@@ -171,16 +172,15 @@ def set_geometry_model_pose( req ):
   model = db().query( GeometryModel ).filter( GeometryModel.geometry_desc == req.id, GeometryModel.type == req.type ).one()
   model.pose.fromROS( req.pose )
   db().commit()
-  process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
 
 def get_object_descriptions_list( req ):
   rospy.loginfo( "SEMAP DB SRVs: get_object_descriptions_list" )
   res = GetObjectDescriptionsListResponse()
-  rospy.loginfo( "before SEMAP DB SRVs: get_object_descriptions_list" )
   descriptions =[]
   try:
-    descriptions = db().query( ObjectDescription.id, ObjectDescription.type ).all()
+    descriptions = db().query(ObjectDescription.id, ObjectDescription.type).distinct().filter(~ObjectDescription.type.match('absolute_description_')).all()
     for id, type in descriptions:
       desc = ROSObjectDescription()
       desc.id = id

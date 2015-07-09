@@ -109,7 +109,7 @@ def list_object_instances():
   objects = db().query( ObjectInstance ).all()
   print "Available ObjectInstances"
   for obj in objects:
-    print 'id:', obj.id, 'name:', obj.name, 'aka:', obj.alias, 'type:', obj.object_description.type
+    print 'id:', obj.id, 'name:', obj.name, 'aka:', obj.alias, 'type:', obj.relative_description.type
 
 def copy_object_instances( req ):
   rospy.loginfo( "SEMAP DB SRVs: copy_object_instances" )
