@@ -3,6 +3,8 @@
 import rospy
 import roslib; roslib.load_manifest( 'spatial_db_ros' )
 
+from sqlalchemy.orm import aliased, join
+
 from db_model import *
 from db_environment import db
 from spatial_db_ros.srv import *
@@ -92,7 +94,7 @@ def binary_relation_test( req ):
     res.results.append( result3 )
   return res
 
-from sqlalchemy.orm import aliased, join
+
 #>>> adalias1 = aliased( Address )
 #>>> adalias2 = aliased( Address )
 #sql

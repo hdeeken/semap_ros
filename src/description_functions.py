@@ -3,6 +3,7 @@
 import roslib; roslib.load_manifest( 'spatial_db_ros' )
 import rospy
 from sqlalchemy import exc
+from sqlalchemy.orm import aliased, join
 
 from db_model import *
 from db_environment import db
