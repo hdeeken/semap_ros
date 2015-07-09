@@ -40,9 +40,9 @@ def switch_object_descriptions( req ):
   res = SwitchObjectDescriptionsResponse()
   objects = db().query( ObjectInstance ).filter( ObjectInstance.id.in_( req.obj_ids ) ).all()
   for obj in objects:
-    obj.object_description_id = req.desc_id
+    obj.relative_description_id = req.desc_id
   db().commit()
-  call_update_absolute_description(res.obj_ids)
+  call_update_absolute_description(req.obj_ids)
   return res
 
 def delete_object_instances( req ):
@@ -146,8 +146,8 @@ def update_transform( req ):
   res = UpdateTransformResponse()
   object = db().query( ObjectInstance ).filter( ObjectInstance.id == req.id ).one()
   object.frame.appendROSPose( req.pose )
-
   db().commit()
+  call_update_absolute_description( [ req.id ] )
   return res
 
 def set_transform( req ):

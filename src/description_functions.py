@@ -133,7 +133,7 @@ def rename_geometry_model( req ):
   model = db().query( GeometryModel ).filter( GeometryModel.geometry_desc == req.id, GeometryModel.type == req.type ).one()
   model.type = req.type
   db().commit()
-  process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
 
 def remove_geometry_model( req ):
@@ -144,7 +144,7 @@ def remove_geometry_model( req ):
     db().delete( model )
   obj = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   db().commit()
-  process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
 
 def update_geometry_model_pose( req ):
@@ -153,7 +153,7 @@ def update_geometry_model_pose( req ):
   model = db().query( GeometryModel ).filter( GeometryModel.geometry_desc == req.id).one()
   model.pose.appendROSPose( req.pose )
   db().commit()
-  process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
 
 def update_and_transform_geometry_model_pose( req ):
@@ -163,7 +163,7 @@ def update_and_transform_geometry_model_pose( req ):
   model.pose.appendROSPose( req.pose )
   model.geometry.appendROSPose( req.pose )
   db().commit()
-  process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
 
 def set_geometry_model_pose( req ):
@@ -216,10 +216,10 @@ def update_instances( req ):
     inst.updateAbsoluteDescription()
   return res
 
-
 def call_process_descriptions_update(ids):
   req = GetObjectInstancesRequest()
   req.ids = ids
+  process_description_update( req )
 
 def process_description_update( req ):
   rospy.loginfo( "SEMAP DB SRVs: process_description_update" )
@@ -236,7 +236,7 @@ def add_point_2d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPoint2DModel( req.model )
   db().commit()
-  call_process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
 
 def add_pose_2d_model( req ):
@@ -245,7 +245,7 @@ def add_pose_2d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPose2DModel( req.model )
   db().commit()
-  call_process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
 
 def add_polygon_2d_model( req ):
@@ -254,7 +254,7 @@ def add_polygon_2d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPolygon2DModel( req.model )
   db().commit()
-  call_process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
 
 def add_point_3d_model( req ):
@@ -263,7 +263,7 @@ def add_point_3d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPoint3DModel( req.model )
   db().commit()
-  call_process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
 
 def add_pose_3d_model( req ):
@@ -272,7 +272,7 @@ def add_pose_3d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPose3DModel( req.model )
   db().commit()
-  call_process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
 
 def add_polygon_3d_model( req ):
@@ -281,7 +281,7 @@ def add_polygon_3d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPolygon3DModel( req.model )
   db().commit()
-  call_process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
 
 def add_triangle_mesh_3d_model( req ):
@@ -291,7 +291,7 @@ def add_triangle_mesh_3d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addTriangleMesh3DModel( req.model )
   db().commit()
-  call_process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
 
 def add_polygon_mesh_3d_model( req ):
@@ -300,5 +300,5 @@ def add_polygon_mesh_3d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPolygonMesh3DModel( req.model )
   db().commit()
-  call_process_description_update( [ req.id ] )
+  call_process_descriptions_update( [ req.id ] )
   return res
