@@ -1,5 +1,4 @@
 int32 id
-string type
 geometry_msgs/Pose pose
 ---
-
+int32[] ids

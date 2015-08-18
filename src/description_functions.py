@@ -12,7 +12,9 @@ from spatial_db_ros.srv import *
 from spatial_db.ros_postgis_conversion import *
 from spatial_db_msgs.msg import ObjectDescription as ROSObjectDescription
 
+from spatial_db_ros.description_srv_calls import *
 from instance_functions import *
+from spatial_db_ros.instance_srv_calls import *
 
 '''
 SEMAP  Object Descriptions Services
@@ -28,7 +30,7 @@ def add_object_descriptions( req ):
     db().flush()
     res.ids.append( object.id )
   db().commit()
-  call_process_descriptions_update(res.ids)
+  call_update_object_descriptions(res.ids)
   rospy.loginfo( "SEMAP DB SRVs: add object descriptions - DONE" )
   return res
 
@@ -84,6 +86,8 @@ def rename_object_description( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.type = req.type
   db().commit()
+  update_res = call_update_object_descriptions( [ req.id ] )
+  res.ids = update_res.ids
   return res
 
 # getter
@@ -130,49 +134,67 @@ def get_geometry_model_types( req ):
 def rename_geometry_model( req ):
   rospy.loginfo( "SEMAP DB SRVs: rename_geometry_model" )
   res = RenameGeometryModelResponse()
-  model = db().query( GeometryModel ).filter( GeometryModel.geometry_desc == req.id, GeometryModel.type == req.type ).one()
+  model = db().query( GeometryModel ).filter( GeometryModel.id == req.id ).one()
   model.type = req.type
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  update_res = call_update_object_descriptions( [ model.geometry_desc ] )
+  res.ids = update_res.ids
   return res
 
 def remove_geometry_model( req ):
   rospy.loginfo( "SEMAP DB SRVs: remove_geometry_model" )
   res = RemoveGeometryModelResponse()
-  models = db().query( GeometryModel ).filter( GeometryModel.geometry_desc == req.id,  GeometryModel.type == req.type ).all()
-  for model in models:
-    db().delete( model )
-  obj = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
+  model = db().query( GeometryModel ).filter( GeometryModel.id == req.id ).one()
+  db().delete( model )
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  update_res = call_update_object_descriptions( [ model.geometry_desc ] )
+  res.ids = update_res.ids
   return res
 
 def update_geometry_model_pose( req ):
   rospy.loginfo( "SEMAP DB SRVs: update_geometry_model_pose" )
-  res = UpdateGeometryModelPose()
-  model = db().query( GeometryModel ).filter( GeometryModel.geometry_desc == req.id).one()
+  res = UpdateGeometryModelPoseResponse()
+  model = db().query( GeometryModel ).filter( GeometryModel.id == req.id ).one()
   model.pose.appendROSPose( req.pose )
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  rospy.loginfo('change pose, now propagate change into desc:')
+  update_res = call_update_object_descriptions( [ model.geometry_desc ] )
+  res.ids = update_res.ids
+  rospy.loginfo( "SEMAP DB SRVs: update_geometry_model_pose finishe" )
   return res
 
 def update_and_transform_geometry_model_pose( req ):
   rospy.loginfo( "SEMAP DB SRVs: update_and_transform_geometry_model_pose" )
-  res = UpdateGeometryModelPose()
-  model = db().query( GeometryModel ).filter( GeometryModel.geometry_desc == req.id, GeometryModel.type == req.type ).one()
-  model.pose.appendROSPose( req.pose )
-  model.geometry.appendROSPose( req.pose )
+  res = UpdateGeometryModelPoseResponse()
+  model = db().query( GeometryModel ).filter( GeometryModel.id == req.id ).one()
+  model.applyROSPose(req.pose)
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  update_res = call_update_object_descriptions( [ model.geometry_desc ] )
+  res.ids = update_res.ids
   return res
 
 def set_geometry_model_pose( req ):
   rospy.loginfo( "SEMAP DB SRVs: set_geometry_model_pose" )
-  res = SetTransformResponse()
-  model = db().query( GeometryModel ).filter( GeometryModel.geometry_desc == req.id, GeometryModel.type == req.type ).one()
+  res = SetGeometryModelPoseResponse()
+  model = db().query( GeometryModel ).filter( GeometryModel.id == req.id ).one()
   model.pose.fromROS( req.pose )
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  print 'update desc', model.geometry_desc
+  update_res = call_update_object_descriptions( [ model.geometry_desc ] )
+  res.ids = update_res.ids
+  return res
+
+def get_geometry_model_bb( req ):
+  rospy.loginfo( "SEMAP DB SRVs: get_geometry_model_bb" )
+  res = GetGeometryModelBoundingBoxResponse()
+  model = db().query( GeometryModel ).filter( GeometryModel.id == req.id ).one()
+  vals = model.getBoundingBoxValues()
+  res.min_x = vals[0]
+  res.max_x = vals[1]
+  res.min_y = vals[2]
+  res.max_y = vals[3]
+  res.min_z = vals[4]
+  res.max_z = vals[5]
   return res
 
 def get_object_descriptions_list( req ):
@@ -195,37 +217,22 @@ def get_object_descriptions_list( req ):
       rospy.loginfo( "got %d descriptions" % len( descriptions ) )
   rospy.loginfo( "return empty res" )
   return res
-
-def update_abstractions( req ):
-  rospy.loginfo( "SEMAP DB SRVs: update_abstractions" )
-  res = GetObjectInstancesResponse()
+  
+def update_object_descriptions( req ):
+  rospy.loginfo( "SEMAP DB SRVs: update_object_descriptions" )
+  res = UpdateObjectDescriptionsResponse()
   descriptions = db().query( ObjectDescription ).filter( ObjectDescription.id.in_( req.ids ) ).all()
   print "Due to change in Description", req.ids
   for desc in descriptions:
     desc.updateAbstractions()
-    print "new abstractions", desc.type
-  return res
-
-def update_instances( req ):
-  rospy.loginfo( "SEMAP DB SRVs: update_instances" )
-  res = GetObjectInstancesResponse()
-  instances = db().query( ObjectInstance ).filter( ObjectInstance.relative_description_id.in_( req.ids ) ).all()
-  print "Due to change in Description", req.ids
+  instances = db().query( ObjectInstance).filter( ObjectInstance.relative_description_id.in_( req.ids ) ).all()
+  instance_ids = []
   for inst in instances:
-    print "update", inst.name
-    inst.updateAbsoluteDescription()
-  return res
-
-def call_process_descriptions_update(ids):
-  req = GetObjectInstancesRequest()
-  req.ids = ids
-  process_description_update( req )
-
-def process_description_update( req ):
-  rospy.loginfo( "SEMAP DB SRVs: process_description_update" )
-  res = GetObjectInstancesResponse()
-  update_abstractions( req )
-  update_instances( req )
+    instance_ids.append(inst.id)
+  print "so lets update these instances", instance_ids
+  instance_res = call_update_absolute_descriptions(instance_ids)
+  res.ids = instance_res.ids
+  rospy.loginfo( "SEMAP DB SRVs: process_description_update - finished" )
   return res
 
 # add geometric primitives to a description
@@ -236,7 +243,7 @@ def add_point_2d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPoint2DModel( req.model )
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  call_update_object_descriptions( [ req.id ] )
   return res
 
 def add_pose_2d_model( req ):
@@ -245,7 +252,7 @@ def add_pose_2d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPose2DModel( req.model )
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  call_update_object_descriptions( [ req.id ] )
   return res
 
 def add_polygon_2d_model( req ):
@@ -254,7 +261,7 @@ def add_polygon_2d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPolygon2DModel( req.model )
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  call_update_object_descriptions( [ req.id ] )
   return res
 
 def add_point_3d_model( req ):
@@ -263,7 +270,7 @@ def add_point_3d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPoint3DModel( req.model )
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  call_update_object_descriptions( [ req.id ] )
   return res
 
 def add_pose_3d_model( req ):
@@ -272,7 +279,7 @@ def add_pose_3d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPose3DModel( req.model )
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  call_update_object_descriptions( [ req.id ] )
   return res
 
 def add_polygon_3d_model( req ):
@@ -281,7 +288,7 @@ def add_polygon_3d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPolygon3DModel( req.model )
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  call_update_object_descriptions( [ req.id ] )
   return res
 
 def add_triangle_mesh_3d_model( req ):
@@ -291,7 +298,7 @@ def add_triangle_mesh_3d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addTriangleMesh3DModel( req.model )
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  call_update_object_descriptions( [ req.id ] )
   return res
 
 def add_polygon_mesh_3d_model( req ):
@@ -300,5 +307,5 @@ def add_polygon_mesh_3d_model( req ):
   desc = db().query( ObjectDescription ).filter( ObjectDescription.id == req.id ).one()
   desc.addPolygonMesh3DModel( req.model )
   db().commit()
-  call_process_descriptions_update( [ req.id ] )
+  call_update_object_descriptions( [ req.id ] )
   return res

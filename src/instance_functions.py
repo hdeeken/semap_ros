@@ -8,7 +8,9 @@ from db_environment import db
 from spatial_db_ros.srv import *
 from spatial_db.ros_postgis_conversion import *
 from spatial_db_msgs.msg import ObjectInstance as ROSObjectInstance
-
+from spatial_db_ros.instance_srv_calls import *
+from sqlalchemy.orm import aliased, join
+from spatial_db_ros.subqueries import *
 '''
 SEMAP Object Instances Services
 '''
@@ -24,7 +26,7 @@ def add_object_instances( req ):
     db().flush()
     res.ids.append( object.id )
   db().commit()
-  call_update_absolute_description(res.ids)
+  call_update_absolute_descriptions(res.ids)
   return res
 
 def rename_object_instance( req ):
@@ -42,7 +44,7 @@ def switch_object_descriptions( req ):
   for obj in objects:
     obj.relative_description_id = req.desc_id
   db().commit()
-  call_update_absolute_description(req.obj_ids)
+  call_update_absolute_descriptions(req.obj_ids)
   return res
 
 def delete_object_instances( req ):
@@ -85,7 +87,6 @@ def get_object_instances( req ):
   for obj in objects:
     then2 = rospy.Time.now()
     ros = obj.toROS()
-    print 'load', ros.absolute.type
     res.objects.append( ros )
     rospy.loginfo( "Object in %r seconds" % ( ( rospy.Time.now() - then2 ).to_sec() ) )
   rospy.loginfo( "Get Objects took %f seconds in total." % ( rospy.Time.now() - then ).to_sec() )
@@ -139,16 +140,7 @@ def get_all_object_instances( req ):
   rospy.loginfo( "Get All Objects as ROS took %f seconds" % ( rospy.Time.now() - then ).to_sec() )
   return res
 
-# instance
-
-def update_transform( req ):
-  rospy.loginfo( "SEMAP DB SRVs: update transform" )
-  res = UpdateTransformResponse()
-  object = db().query( ObjectInstance ).filter( ObjectInstance.id == req.id ).one()
-  object.frame.appendROSPose( req.pose )
-  db().commit()
-  call_update_absolute_description( [ req.id ] )
-  return res
+# frame
 
 def set_transform( req ):
   rospy.loginfo( "SEMAP DB SRVs: set transform" )
@@ -156,7 +148,19 @@ def set_transform( req ):
   object = db().query( ObjectInstance ).filter(ObjectInstance.id == req.id).scalar()
   object.frame.setROSPose(req.pose)
   db().commit()
-  call_update_absolute_description( [ req.id ] )
+  update_res = call_update_absolute_descriptions( [ req.id ] )
+  res.ids = update_res.ids
+  return res
+
+def update_transform( req ):
+  rospy.loginfo( "SEMAP DB SRVs: update transform" )
+  res = UpdateTransformResponse()
+  object = db().query( ObjectInstance ).filter( ObjectInstance.id == req.id ).one()
+  object.frame.appendROSPose( req.pose )
+  db().commit()
+  update_res = call_update_absolute_descriptions( [ req.id ] )
+  res.ids = update_res.ids
+  rospy.loginfo( "SEMAP DB SRVs: update transform finished" )
   return res
 
 def change_frame( req ):
@@ -165,19 +169,63 @@ def change_frame( req ):
   object = db().query( ObjectInstance ).filter( ObjectInstance.id == req.id ).scalar()
   object.frame.changeFrame( req.frame, req.keep_transform )
   db().commit()
-  call_update_absolute_description( [ req.id ] )
+  update_res = call_update_absolute_descriptions( [ req.id ] )
+  res.ids = update_res.ids
   return res
 
-def update_absolute_description( req ):
+# absolute
+
+def update_absolute_descriptions( req ):
     rospy.loginfo( "SEMAP DB SRVs: update_absolute_description" )
     then = rospy.Time.now()
-    res = GetObjectInstancesResponse()
+    res = UpdateAbsoluteDescriptionsResponse()
+    print 'update inst', req.ids
     objects = db().query( ObjectInstance ).filter( ObjectInstance.id.in_( req.ids ) ).all()
     for obj in objects:
       obj.updateAbsoluteDescription()
+      res.ids.append( obj.id )
+      if len( obj.getChildIDs() ):
+        rospy.loginfo( "update children" )
+        print obj.getChildIDs()
+        child_res = call_update_absolute_descriptions( obj.getChildIDs() )
+        res.ids += child_res.ids
+    print 'updated these instances', res.ids
     return res
 
-def call_update_absolute_description(ids):
-  update_req = GetObjectInstancesRequest()
-  update_req.ids = ids
-  update_absolute_description(update_req)
+def get_absolute_body_meshes( req ):
+  rospy.loginfo( "SEMAP DB SRVs: get_absolute_body_meshes" )
+  response = GetAbsoluteBodyMeshesResponse()
+
+  obj = aliased( ObjectInstance )
+  desc = aliased( ObjectDescription )
+  geo = aliased( GeometryModel )
+
+  for type in req.object_types:
+    geos = db().query( geo ).filter(
+       obj.id.in_( any_obj_type_ids( obj, type ) ),
+       geo.id.in_( get_geometry( obj.id, geo, "Body" ) ) ).all()
+    for model in geos:
+      response.meshes.append( toTriangleMesh3D(model.geometry) )
+
+  return response
+
+def get_absolute_footprint_polygons( req ):
+  rospy.loginfo( "SEMAP DB SRVs: get_absolute_footprint_polygons" )
+  response = GetAbsoluteFootprintPolygonsResponse()
+
+  obj = aliased( ObjectInstance )
+  desc = aliased( ObjectDescription )
+  geo = aliased( GeometryModel )
+
+  for type in req.object_types:
+    geos = db().query( geo ).filter(
+       obj.id.in_( any_obj_type_ids( obj, type ) ),
+       geo.id.in_( get_abstraction( obj.id, geo, req.footprint_type ) ) ).all()
+
+    for model in geos:
+      if req.footprint_padding:
+        response.polygons.append( toPolygon2D( db().execute( ST_Buffer( model.geometry , req.footprint_padding, 'endcap=square join=round') ).scalar() ) ) 
+      else:
+        response.polygons.append( toPolygon2D( model.geometry ) )
+
+  return response

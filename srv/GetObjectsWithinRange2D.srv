@@ -1,0 +1,7 @@
+string[] object_types
+string geometry_type
+geometry_msgs/Point point
+float32 distance
+bool fully_within
+---
+int32[] ids

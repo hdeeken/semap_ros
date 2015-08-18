@@ -6,10 +6,13 @@ import roslib; roslib.load_manifest( 'spatial_db_ros' )
 from spatial_db_ros.srv import *
 
 from tf_functions import *
-from test_functions import *
+
 from database_functions import *
 from instance_functions import *
 from description_functions import *
+
+from spatial_relations import *
+from test_functions import *
 
 from db_environment import db, initializeConnection
 
@@ -20,7 +23,7 @@ SEMAP DB Services
 def spatial_db_services():
 
   rospy.init_node( 'semap_db_services' )
-
+  rospy.loginfo( "SEMAP DB Services are initializing...\n" )
   user = rospy.get_param( '~user' )
   password = rospy.get_param( '~password' )
   host = rospy.get_param( '~host' )
@@ -37,13 +40,16 @@ def spatial_db_services():
   srv_delete_object_descriptions = rospy.Service( 'delete_object_descriptions', DeleteObjectDescriptions, delete_object_descriptions )
   srv_copy_object_descriptions = rospy.Service( 'copy_object_descriptions', CopyObjectDescriptions, copy_object_descriptions )
   srv_rename_object_description = rospy.Service( 'rename_object_description', RenameObjectDescription, rename_object_description )
+  srv_update_object_descriptions = rospy.Service( 'update_object_descriptions', UpdateObjectDescriptions, update_object_descriptions )
 
   ## Geometry Models
   srv_set_geometry_model = rospy.Service( 'set_geometry_model_pose', SetGeometryModelPose, set_geometry_model_pose )
   srv_update_geometry_model = rospy.Service( 'update_geometry_model_pose', UpdateGeometryModelPose, update_geometry_model_pose )
+  srv_update_and_transform_geometry_model_pose = rospy.Service( 'update_and_transform_geometry_model_pose', UpdateGeometryModelPose, update_and_transform_geometry_model_pose )
   srv_rename_geometry_model = rospy.Service( 'rename_geometry_model', RenameGeometryModel, rename_geometry_model )
   srv_remove_geometry_model = rospy.Service( 'remove_geometry_model', RemoveGeometryModel, remove_geometry_model )
   srv_get_geometry_model_types = rospy.Service( 'get_geometry_model_types', GetGeometryModelTypes, get_geometry_model_types )
+  srv_get_geometry_model_bb = rospy.Service( 'get_geometry_model_bb', GetGeometryModelBoundingBox, get_geometry_model_bb )
   srv_add_point_2d_model = rospy.Service( 'add_point_2d_model', AddPoint2DModel, add_point_2d_model )
   srv_add_pose_2d_model = rospy.Service( 'add_pose_2d_model', AddPose2DModel, add_pose_2d_model )
   srv_add_polygon_2d_model = rospy.Service( 'add_polygon_2d_model', AddPolygon2DModel, add_polygon_2d_model )
@@ -62,7 +68,8 @@ def spatial_db_services():
   srv_delete_object_instances = rospy.Service( 'delete_object_instances', DeleteObjectInstances, delete_object_instances )
   srv_copy_object_instances = rospy.Service( 'copy_object_instances', CopyObjectInstances, copy_object_instances )
   srv_switch_object_descriptions = rospy.Service( 'switch_object_descriptions', SwitchObjectDescriptions, switch_object_descriptions )
-
+  srv_update_absolute_descriptions = rospy.Service( 'update_absolute_descriptions', UpdateAbsoluteDescriptions, update_absolute_descriptions )
+  
   ### TF Tree
   srv_add_root_frame = rospy.Service( 'add_root_frame', AddRootFrame, add_root_frame )
   srv_set_transform = rospy.Service( 'set_transform', SetTransform, set_transform )
@@ -71,6 +78,16 @@ def spatial_db_services():
   srv_get_frame_names = rospy.Service( 'get_frame_names', GetFrameNames, get_frame_names )
   srv_get_transform = rospy.Service( 'get_transform', GetTransform, get_transform )
 
+  ### NAV
+  srv_get_absolute_footprint_polygons = rospy.Service( 'get_absolute_footprint_polygons', GetAbsoluteFootprintPolygons, get_absolute_footprint_polygons )
+  srv_get_absolute_footprint_polygons = rospy.Service( 'get_absolute_body_meshes', GetAbsoluteBodyMeshes, get_absolute_body_meshes )
+
+  ## Spatial Relations
+  srv_get_objects_within_polygon2d = rospy.Service( 'get_objects_within_polygon2d', GetObjectsWithinPolygon2D, get_objects_within_polygon2d )
+  srv_get_objects_within_range2d = rospy.Service( 'get_objects_within_range2d', GetObjectsWithinRange2D, get_objects_within_range2d )
+  srv_get_objects_within_range3d = rospy.Service( 'get_objects_within_range3d', GetObjectsWithinRange2D, get_objects_within_range3d )
+
+  srv_get_directional_relations2d = rospy.Service( 'get_directional_relations2d', GetDirectionalRelations2D, get_directional_relations2d )
   ### DB
   srv_db_truncate_tables = rospy.Service( 'db_truncate_tables', DBTruncateTables, db_truncate_tables )
   srv_db_create_tables = rospy.Service( 'db_create_tables', DBCreateTables, db_create_tables )
@@ -84,7 +101,7 @@ def spatial_db_services():
   srv_unary_relation_test = rospy.Service( 'unary_relation_test', UnaryRelationTest, unary_relation_test )
   srv_binary_relation_test = rospy.Service( 'binary_relation_test', BinaryRelationTest, binary_relation_test )
 
-  print "SEMAP DB Services are online."
+  rospy.loginfo( "SEMAP DB Services are running...\n" )
   rospy.spin()
 
 if __name__ == "__main__":

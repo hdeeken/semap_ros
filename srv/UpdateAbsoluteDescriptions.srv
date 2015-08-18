@@ -1,0 +1,3 @@
+int32[] ids  # instances to be updated
+---
+int32[] ids # affected instances

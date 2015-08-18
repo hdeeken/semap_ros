@@ -1,0 +1,5 @@
+int32 reference_id
+int32 target_id
+string geometry_type
+---
+string[] relations

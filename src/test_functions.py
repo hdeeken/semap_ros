@@ -10,6 +10,7 @@ from db_environment import db
 from spatial_db_ros.srv import *
 from spatial_db.ros_postgis_conversion import *
 
+from spatial_db_ros.subqueries import *
 '''
 SEMAP Spatial Relations Services
 '''
@@ -247,21 +248,6 @@ def test_object_instances( req ):
 
   rospy.loginfo( "Get Test took %f seconds in total." % ( rospy.Time.now() - then ).to_sec() )
   return res
-
-
-def any_obj_type(obj, type):
-  desc = aliased( ObjectDescription )
-  return db().query( obj ).filter( obj.relative_description_id == desc.id, desc.type == type )
-
-def any_obj_type_ids(obj, type):
-  desc = aliased( ObjectDescription )
-  return db().query( obj.id ).filter( obj.relative_description_id == desc.id, desc.type == type )
-
-def obj_geo(obj_id, geo, type):
-  return db().query( geo.id ).filter( and_(ObjectInstance.id == obj_id, ObjectInstance.absolute_description_id == geo.abstraction_desc, geo.type == "Position3D") )
-
-def obj_geo_ids(obj, geo, type):
-  return db().query( geo ).filter( and_(obj.absolute_description_id == geo.abstraction_desc, geo.type == type))
 
 def test_ecmr( req ):
   rospy.loginfo( "SEMAP DB SRVs: test_ecmr" )

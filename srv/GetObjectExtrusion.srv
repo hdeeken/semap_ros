@@ -1,0 +1,3 @@
+int32 id
+---
+mesh_msgs/PolygonMesh mesh
