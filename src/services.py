@@ -88,6 +88,8 @@ def spatial_db_services():
   srv_get_objects_within_range3d = rospy.Service( 'get_objects_within_range3d', GetObjectsWithinRange2D, get_objects_within_range3d )
 
   srv_get_directional_relations2d = rospy.Service( 'get_directional_relations2d', GetDirectionalRelations2D, get_directional_relations2d )
+  srv_get_directional_relations3d = rospy.Service( 'get_directional_relations3d', GetDirectionalRelations2D, get_directional_relations3d )
+  srv_test_containment_relations3d = rospy.Service( 'test_containment_relations3d', GetDirectionalRelations2D, test_containment_relations3d )
   ### DB
   srv_db_truncate_tables = rospy.Service( 'db_truncate_tables', DBTruncateTables, db_truncate_tables )
   srv_db_create_tables = rospy.Service( 'db_create_tables', DBCreateTables, db_create_tables )

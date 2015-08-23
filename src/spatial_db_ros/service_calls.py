@@ -90,6 +90,22 @@ def call_get_directional_relations2d(refrence_id, target_id, geometry_type):
   except rospy.ServiceException as e:
     return None, "GetDirectionalRelations2D service call failed: %s" % e
 
+def call_test_containment_relations3d(refrence_id, target_id, geometry_type):
+  try:
+    rospy.wait_for_service('test_containment_relations3d')
+    call = rospy.ServiceProxy('test_containment_relations3d', GetDirectionalRelations2D)
+    request = GetDirectionalRelations2DRequest()
+    request.reference_id = reference_id
+    request.target_id = target_id
+    request.geometry_type = geometry_type
+    response = call(request)
+    rospy.loginfo('TestContainmentRelations3d services call succeeded!')
+    print response
+    return response
+  except rospy.ServiceException as e:
+    return None, "TestContainmentRelations3d service call failed: %s" % e
+
+
 ###
 
 ###
