@@ -5,6 +5,7 @@ import roslib; roslib.load_manifest( 'spatial_db_ros' )
 
 from db_model import *
 from db_environment import db
+#from db_object_instance import *
 from spatial_db_ros.srv import *
 from spatial_db.ros_postgis_conversion import *
 from spatial_db_msgs.msg import ObjectInstance as ROSObjectInstance
