@@ -10,4 +10,4 @@ srv_gen/
 *.pyc
 *~
 *.swp
-src/spatial_db_ros/srv/
+src/semap_ros/srv/
