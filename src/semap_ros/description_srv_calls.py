@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 
-'''
-SpatialDB Service Calls
-'''
-
-import roslib; roslib.load_manifest('spatial_db_ros')
+import roslib; roslib.load_manifest('semap_ros')
 import rospy
 
-from spatial_db_ros.srv import *
+from semap_ros.srv import *
 
 def call_add_object_descriptions(descriptions):
   try:

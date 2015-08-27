@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 
 import rospy
-import roslib; roslib.load_manifest( 'spatial_db_ros' )
+import roslib; roslib.load_manifest( 'semap_ros' )
 
 from sqlalchemy.orm import aliased, join
 
 from db_model import *
 from db_environment import db
-from spatial_db_ros.srv import *
+from semap_ros.srv import *
 from spatial_db.ros_postgis_conversion import *
 
-from spatial_db_ros.subqueries import *
+from semap_ros.subqueries import *
 '''
 SEMAP Spatial Relations Services
 '''

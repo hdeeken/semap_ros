@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 import rospy
-import roslib; roslib.load_manifest( 'spatial_db_ros' )
+import roslib; roslib.load_manifest('semap_ros')
 
 from sqlalchemy.orm import aliased, join
 from sqlalchemy import and_
 
 from db_model import *
 from db_environment import db
-from spatial_db_ros.srv import *
+from semap_ros.srv import *
 from spatial_db.ros_postgis_conversion import *
 
 # extend to multiple types via desc.type.in(types)
@@ -30,7 +30,6 @@ def any_obj_types_ids(obj, types):
   desc = aliased( ObjectDescription )
   return db().query( obj.id ).filter( obj.relative_description_id == desc.id, desc.type.in_(types) )
 
-
 def obj_geo(obj_id, geo, type):
   return db().query( geo.id ).filter( and_(ObjectInstance.id == obj_id, ObjectInstance.absolute_description_id == geo.abstraction_desc, geo.type == type) )
 
@@ -39,7 +38,6 @@ def get_geometry(obj_id, geo, type):
 
 def get_abstraction(obj_id, geo, type):
   return db().query( geo.id ).filter( and_(ObjectInstance.id == obj_id, ObjectInstance.absolute_description_id == geo.abstraction_desc, geo.type == type) )
-
 
 def obj_geo_ids(obj, geo, type):
   return db().query( geo ).filter( and_(obj.absolute_description_id == geo.abstraction_desc, geo.type == type))

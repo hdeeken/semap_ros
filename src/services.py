@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import rospy
-import roslib; roslib.load_manifest( 'spatial_db_ros' )
+import roslib; roslib.load_manifest( 'semap_ros' )
 
-from spatial_db_ros.srv import *
+from semap_ros.srv import *
 
 from tf_functions import *
 

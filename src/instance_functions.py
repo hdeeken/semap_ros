@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 
 import rospy
-import roslib; roslib.load_manifest( 'spatial_db_ros' )
+import roslib; roslib.load_manifest( 'semap_ros' )
 
 from db_model import *
 from db_environment import db
 #from db_object_instance import *
-from spatial_db_ros.srv import *
+from semap_ros.srv import *
 from spatial_db.ros_postgis_conversion import *
 from spatial_db_msgs.msg import ObjectInstance as ROSObjectInstance
-from spatial_db_ros.instance_srv_calls import *
+from semap_ros.instance_srv_calls import *
 from sqlalchemy.orm import aliased, join
-from spatial_db_ros.subqueries import *
+from semap_ros.subqueries import *
+
 '''
 SEMAP Object Instances Services
 '''

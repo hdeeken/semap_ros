@@ -6,7 +6,7 @@
   <arg name="host" default="localhost"/>
   <arg name="database" default="semap_devel"/>
 
-  <node name="spatial_db_services" pkg="spatial_db_ros" type="services.py" output="screen">
+  <node name="semap_database_services" pkg="semap_ros" type="services.py" output="screen">
     <param name="user" value="$(arg user)"/>
     <param name="password" value="$(arg password)"/>
     <param name="host" value="$(arg host)"/>

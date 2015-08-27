@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 
 '''
-SpatialDB Service Calls
+SEMAP DB Service Calls
 '''
 
-import roslib; roslib.load_manifest('spatial_db_ros')
+import roslib; roslib.load_manifest('semap_ros')
 import rospy
 from sqlalchemy import exc
 
 from db_model import *
 from db_environment import db
 from spatial_db.ros_postgis_conversion import *
-from spatial_db_ros.srv import *
+from semap_ros.srv import *
 from spatial_db_msgs.msg import ObjectDescription as ROSObjectDescription
 from spatial_db_msgs.msg import ObjectInstance as ROSObjectInstance
 from visualization_msgs.msg import MarkerArray
