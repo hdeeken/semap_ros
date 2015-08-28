@@ -1,4 +1,4 @@
 int32 id
-spatial_db_msgs/Point3DModel model
+semap_msgs/Point3DModel model
 ---
 

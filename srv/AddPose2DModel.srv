@@ -1,4 +1,4 @@
 int32 id
-spatial_db_msgs/Pose2DModel model
+semap_msgs/Pose2DModel model
 ---
 

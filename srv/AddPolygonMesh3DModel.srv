@@ -1,4 +1,4 @@
 int32 id
-spatial_db_msgs/PolygonMesh3DModel model
+semap_msgs/PolygonMesh3DModel model
 ---
 

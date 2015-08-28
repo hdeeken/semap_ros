@@ -4,5 +4,5 @@ string type1
 string type2
 string[] relations
 ---
-spatial_db_msgs/LabeledGeometryCollection[] results
+semap_msgs/LabeledGeometryCollection[] results
 

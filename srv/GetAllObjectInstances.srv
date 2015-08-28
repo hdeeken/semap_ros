@@ -1,2 +1,2 @@
 ---
-spatial_db_msgs/ObjectInstance[] objects
+semap_msgs/ObjectInstance[] objects

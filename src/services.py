@@ -20,7 +20,7 @@ from db_environment import db, initializeConnection
 SEMAP DB Services
 '''
 
-def spatial_db_services():
+def semap_services():
 
   rospy.init_node( 'semap_db_services' )
   rospy.loginfo( "SEMAP DB Services are initializing...\n" )
@@ -107,4 +107,4 @@ def spatial_db_services():
   rospy.spin()
 
 if __name__ == "__main__":
-  spatial_db_services()
+  semap_services()

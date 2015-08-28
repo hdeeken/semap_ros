@@ -1,2 +1,2 @@
 ---
-spatial_db_msgs/ObjectDescription[] descriptions
+semap_msgs/ObjectDescription[] descriptions

@@ -15,8 +15,8 @@
   <depend package="geometry_msgs"/>
   <depend package="shape_msgs"/>
   <depend package="visualization_msgs"/>
-  <depend package="spatial_db"/>
-  <depend package="spatial_db_msgs"/>
+  <depend package="semap"/>
+  <depend package="semap_msgs"/>
 
   <depend package="python_qt_binding"/>
   <depend package="rviz"/>

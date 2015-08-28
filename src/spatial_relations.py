@@ -10,7 +10,7 @@ from db_model import *
 from sqlalchemy import func
 from db_environment import db
 from semap_ros.srv import *
-from spatial_db.ros_postgis_conversion import *
+from semap.ros_postgis_conversion import *
 
 from sqlalchemy.types import UserDefinedType
 try:

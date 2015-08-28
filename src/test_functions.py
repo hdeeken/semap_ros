@@ -8,7 +8,7 @@ from sqlalchemy.orm import aliased, join
 from db_model import *
 from db_environment import db
 from semap_ros.srv import *
-from spatial_db.ros_postgis_conversion import *
+from semap.ros_postgis_conversion import *
 
 from semap_ros.subqueries import *
 '''
