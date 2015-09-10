@@ -37,39 +37,43 @@ def call_get_objects_within_polygon2d(object_types, geometry_type, polygon, full
   except rospy.ServiceException as e:
     return None, "GetObjectsWithinPolygon2D service call failed: %s" % e
 
-def call_get_objects_within_range2d(object_types, geometry_type, point, distance, fully_within = False):
+def call_get_objects_within_range(reference_point, target_object_types, target_object_geometry_type, distance, fully_within = False):
   try:
-    rospy.wait_for_service('get_objects_within_range2d')
-    call = rospy.ServiceProxy('get_objects_within_range2d', GetObjectsWithinRange2D)
-    request = GetObjectsWithinRange2DRequest()
-    request.object_types = object_types
-    request.geometry_type = geometry_type
-    request.point = point
+    rospy.wait_for_service('get_objects_within_range')
+    call = rospy.ServiceProxy('get_objects_within_range', GetObjectsWithinRange)
+    request = GetObjectsWithinRangeRequest()
+    request.reference_point = reference_point
+    request.target_object_types = target_object_types
+    request.target_object_geometry_type = target_object_geometry_type
     request.distance = distance
     request.fully_within = fully_within
+    print 'PRECALL'
     response = call(request)
-    rospy.loginfo('GetObjectsWithinRange2D services call succeeded!')
-    print response
+    rospy.loginfo('GetObjectsWithinRange services call succeeded!')
     return response
   except rospy.ServiceException as e:
-    return None, "GetObjectsWithinRange2D service call failed: %s" % e
+    return None, "GetObjectsWithinRange service call failed: %s" % e
 
-def call_get_objects_within_range3d(object_types, geometry_type, point, distance, fully_within = False):
+def call_get_distance_between_objects3d(reference_object_types, reference_object_geometry_type, target_object_types, target_object_geometry_type, min_range = 0.0, max_range = 0.0, sort_descending = False, max_distance = False, return_points = False):
   try:
-    rospy.wait_for_service('get_objects_within_range3d')
-    call = rospy.ServiceProxy('get_objects_within_range3d', GetObjectsWithinRange2D)
-    request = GetObjectsWithinRange2DRequest()
-    request.object_types = object_types
-    request.geometry_type = geometry_type
-    request.point = point
-    request.distance = distance
-    request.fully_within = fully_within
+    rospy.wait_for_service('get_distance_between_objects3d')
+    call = rospy.ServiceProxy('get_distance_between_objects3d', GetDistanceBetweenObjects3D)
+    request = GetDistanceBetweenObjects3DRequest()
+    request.reference_object_types = reference_object_types
+    request.reference_object_geometry_type = reference_object_geometry_type
+    request.target_object_types = target_object_types
+    request.target_object_geometry_type = target_object_geometry_type
+    request.min_range = min_range
+    request.max_range = max_range
+    request.sort_descending = sort_descending
+    request.max_distance = max_distance
+    request.return_points = return_points
     response = call(request)
-    rospy.loginfo('GetObjectsWithinRange3D services call succeeded!')
-    print response
+    rospy.loginfo('GetDistanceBetweenObjects3D services call succeeded!')
     return response
   except rospy.ServiceException as e:
-    return None, "GetObjectsWithinRange3D service call failed: %s" % e
+    return None, "GetDistanceBetweenObjects3D service call failed: %s" % e
+
 
 def call_get_directional_relations2d(refrence_id, target_id, geometry_type):
   try:

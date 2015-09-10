@@ -1,0 +1,4 @@
+string[] reference_types
+string[] target_types
+---
+semap_msgs/ObjectPair[] pairs

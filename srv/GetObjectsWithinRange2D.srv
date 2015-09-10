@@ -5,3 +5,4 @@ float32 distance
 bool fully_within
 ---
 int32[] ids
+float32[] distances

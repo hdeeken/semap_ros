@@ -33,16 +33,18 @@ def semap_services():
 
   ## Object Descriptions
   srv_add_object_descriptions = rospy.Service( 'add_object_descriptions', AddObjectDescriptions, add_object_descriptions )
-  srv_get_object_descriptions = rospy.Service( 'get_object_descriptions', GetObjectDescriptions, get_object_descriptions )
-  srv_get_object_description_id = rospy.Service( 'get_object_description_id', GetObjectDescriptionID, get_object_description_id )
-  srv_get_all_object_descriptions = rospy.Service( 'get_all_object_descriptions', GetAllObjectDescriptions, get_all_object_descriptions )
-  srv_get_object_descriptions_list = rospy.Service( 'get_object_descriptions_list', GetObjectDescriptionsList, get_object_descriptions_list )
-  srv_delete_object_descriptions = rospy.Service( 'delete_object_descriptions', DeleteObjectDescriptions, delete_object_descriptions )
   srv_copy_object_descriptions = rospy.Service( 'copy_object_descriptions', CopyObjectDescriptions, copy_object_descriptions )
+  srv_delete_object_descriptions = rospy.Service( 'delete_object_descriptions', DeleteObjectDescriptions, delete_object_descriptions )
+  srv_get_object_descriptions = rospy.Service( 'get_object_descriptions', GetObjectDescriptions, get_object_descriptions )
+  srv_get_object_descriptions_ids = rospy.Service( 'get_object_descriptions_ids', GetObjectDescriptionsIDs, get_object_descriptions_ids )
+  srv_get_object_descriptions_list = rospy.Service( 'get_object_descriptions_list', GetObjectDescriptionsList, get_object_descriptions_list )
+  srv_get_all_object_descriptions = rospy.Service( 'get_all_object_descriptions', GetAllObjectDescriptions, get_all_object_descriptions )
   srv_rename_object_description = rospy.Service( 'rename_object_description', RenameObjectDescription, rename_object_description )
   srv_update_object_descriptions = rospy.Service( 'update_object_descriptions', UpdateObjectDescriptions, update_object_descriptions )
+  srv_update_all_object_descriptions = rospy.Service( 'update_all_object_descriptions', UpdateObjectDescriptions, update_all_object_descriptions )
 
   ## Geometry Models
+  srv_make_relative3d = rospy.Service( 'make_relative3d', UpdateObjectDescriptions, make_relative3d )
   srv_set_geometry_model = rospy.Service( 'set_geometry_model_pose', SetGeometryModelPose, set_geometry_model_pose )
   srv_update_geometry_model = rospy.Service( 'update_geometry_model_pose', UpdateGeometryModelPose, update_geometry_model_pose )
   srv_update_and_transform_geometry_model_pose = rospy.Service( 'update_and_transform_geometry_model_pose', UpdateGeometryModelPose, update_and_transform_geometry_model_pose )
@@ -62,6 +64,7 @@ def semap_services():
   ## Object Instances
   srv_add_object_instances = rospy.Service( 'add_object_instances', AddObjectInstances, add_object_instances )
   srv_get_object_instances = rospy.Service( 'get_object_instances', GetObjectInstances, get_object_instances )
+  srv_get_object_instances_ids = rospy.Service( 'get_object_instances_ids', GetObjectInstancesIDs, get_object_instances_ids )
   srv_get_object_instances_list = rospy.Service( 'get_object_instances_list', GetObjectInstancesList, get_object_instances_list )
   srv_get_all_object_instances = rospy.Service( 'get_all_object_instances', GetAllObjectInstances, get_all_object_instances )
   srv_rename_object_instance = rospy.Service( 'rename_object_instance', RenameObjectInstance, rename_object_instance )
@@ -83,9 +86,19 @@ def semap_services():
   srv_get_absolute_footprint_polygons = rospy.Service( 'get_absolute_body_meshes', GetAbsoluteBodyMeshes, get_absolute_body_meshes )
 
   ## Spatial Relations
+
+  srv_get_objects_within_range = rospy.Service( 'get_objects_within_range', GetObjectsWithinRange, get_objects_within_range )
+
+  #srv_get_objects_within_object_range3d = rospy.Service( 'get_objects_within_object_range3d', GetObjectsWithinRange, get_objects_within_object_range3d )
+  srv_get_distance_between_objects3d = rospy.Service( 'get_distance_between_objects3d', GetDistanceBetweenObjects3D, get_distance_between_objects3d )
+
   srv_get_objects_within_polygon2d = rospy.Service( 'get_objects_within_polygon2d', GetObjectsWithinPolygon2D, get_objects_within_polygon2d )
-  srv_get_objects_within_range2d = rospy.Service( 'get_objects_within_range2d', GetObjectsWithinRange2D, get_objects_within_range2d )
-  srv_get_objects_within_range3d = rospy.Service( 'get_objects_within_range3d', GetObjectsWithinRange2D, get_objects_within_range3d )
+
+  srv_get_objects_within_object = rospy.Service( 'get_objects_within_object', GetObjectsWithinObject, get_objects_within_object )
+  srv_bind_contained_objects = rospy.Service( 'bind_contained_objects', GetObjectsWithinObject, bind_contained_objects )
+  srv_unbind_contained_objects = rospy.Service( 'unbind_contained_objects', GetObjectsWithinObject, unbind_contained_objects )
+  srv_get_objects_on_obb3d = rospy.Service( 'get_objects_on_obb3d', GetObjectsOnOBB3D, get_objects_on_obb3d )
+  srv_get_objects_in_obb3d = rospy.Service( 'get_objects_in_obb3d', GetObjectsOnOBB3D, get_objects_in_obb3d )
 
   srv_get_directional_relations2d = rospy.Service( 'get_directional_relations2d', GetDirectionalRelations2D, get_directional_relations2d )
   srv_get_directional_relations3d = rospy.Service( 'get_directional_relations3d', GetDirectionalRelations2D, get_directional_relations3d )

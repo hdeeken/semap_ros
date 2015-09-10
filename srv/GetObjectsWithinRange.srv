@@ -1,0 +1,9 @@
+geometry_msgs/Point reference_point
+
+string[] target_object_types
+string target_object_geometry_type
+
+float32 distance
+bool fully_within
+---
+semap_msgs/ObjectPair[] pairs

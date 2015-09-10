@@ -225,6 +225,18 @@ def call_update_object_descriptions(ids):
   except rospy.ServiceException as e:
     return None, "UpdateObjectDescriptions service call failed: %s" % e
 
+def call_make_relative3d(ids):
+  try:
+    rospy.wait_for_service('make_relative3d')
+    request = UpdateObjectDescriptionsRequest()
+    request.ids = ids
+    call = rospy.ServiceProxy('make_relative3d', UpdateObjectDescriptions)
+    response = call(request)
+    print 'MakeRelative3D service call succeeded!'
+    return response
+  except rospy.ServiceException as e:
+    return None, "MakeRelative3D service call failed: %s" % e
+
 # add geometric primitives to a description
 
 def call_add_point_2d_model(id, model):

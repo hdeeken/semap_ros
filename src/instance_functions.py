@@ -94,16 +94,24 @@ def get_object_instances( req ):
   rospy.loginfo( "Get Objects took %f seconds in total." % ( rospy.Time.now() - then ).to_sec() )
   return res
 
+def get_object_instances_ids( req ):
+  rospy.loginfo( "DB SRVs: get_object_instances_ids" )
+  res = GetObjectInstancesIDsResponse()
+  res.ids = any_obj_types_ids(ObjectInstance, req.types)
+  return res
+
 def get_object_instances_list( req ):
   rospy.loginfo( "DB SRVs: get_object_instances_list" )
   res = GetObjectInstancesListResponse()
-  objects = db().query( ObjectInstance.id, ObjectInstance.name, ObjectInstance.alias, FrameNode ).filter( ObjectInstance.frame_id == FrameNode.id ).all()
-  for id, name, alias, frame in objects:
+  objects = db().query( ObjectInstance.id, ObjectInstance.name, ObjectInstance.alias, FrameNode, ObjectDescription.type).\
+                filter( ObjectInstance.id.in_( any_obj_types_ids(ObjectInstance, req.types) ), ObjectInstance.relative_description_id == ObjectDescription.id, ObjectInstance.frame_id == FrameNode.id ).all()
+  for id, name, alias, frame, type in objects:
     obj = ROSObjectInstance()
     obj.id = id
     obj.name = name
     obj.alias = alias
     obj.pose = frame.toROSPoseStamped()
+    obj.description.type = type
     res.objects.append( obj )
   return res
 
@@ -207,6 +215,7 @@ def get_absolute_body_meshes( req ):
        obj.id.in_( any_obj_type_ids( obj, type ) ),
        geo.id.in_( get_geometry( obj.id, geo, "Body" ) ) ).all()
     for model in geos:
+      print model.geometry, model.type
       response.meshes.append( toTriangleMesh3D(model.geometry) )
 
   return response
@@ -231,3 +240,16 @@ def get_absolute_footprint_polygons( req ):
         response.polygons.append( toPolygon2D( model.geometry ) )
 
   return response
+
+def get_instance_ids_by_type( req ):
+  rospy.loginfo( "SEMAP DB SRVs: get_instance_ids_by_type" )
+  then = rospy.Time.now()
+  res = GetObjectInstancesResponse()
+  objects = any_obj_types_ids(obj, types)
+  for obj in objects:
+    then2 = rospy.Time.now()
+    ros = obj.toROS()
+    res.objects.append( ros )
+    rospy.loginfo( "Object in %r seconds" % ( ( rospy.Time.now() - then2 ).to_sec() ) )
+  rospy.loginfo( "Get Objects took %f seconds in total." % ( rospy.Time.now() - then ).to_sec() )
+  return res

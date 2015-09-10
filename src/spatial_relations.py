@@ -13,6 +13,7 @@ from semap_ros.srv import *
 from semap.ros_postgis_conversion import *
 
 from sqlalchemy.types import UserDefinedType
+from sqlalchemy import desc
 try:
     from sqlalchemy.sql.functions import _FunctionGenerator
 except ImportError:  # SQLA < 0.9
@@ -20,6 +21,8 @@ except ImportError:  # SQLA < 0.9
 
 
 from semap_ros.subqueries import *
+from semap_ros.instance_srv_calls import *
+from semap_msgs.msg import ObjectPair
 
 '''
 SEMAP Spatial Relations Services
@@ -45,7 +48,6 @@ def get_objects_within_polygon2d( req ):
         obj_ids = any_obj_types_ids(obj, req.object_types)
       else:
         obj_ids = any_obj_ids(obj)
-
       if req.fully_within:
         ids = db().query( obj.id ).filter( obj.id.in_( obj_ids ), \
                                            obj.absolute_description_id == geo.abstraction_desc, geo.type == req.geometry_type, \
@@ -87,7 +89,6 @@ def get_objects_within_range2d( req ):
                                            ST_DFullyWithin(fromPoint2D(req.point),geo.geometry, req.distance)
                                           ).all()
       else:
-        # use ST_Buffer to create a circle and check for overlap?
         ids = db().query( obj.id ).filter( obj.id.in_( obj_ids ), \
                                            obj.absolute_description_id == geo.abstraction_desc, geo.type == req.geometry_type, \
                                            ST_DWithin(fromPoint2D(req.point), geo.geometry, req.distance)
@@ -96,98 +97,125 @@ def get_objects_within_range2d( req ):
   res.ids = [id for id, in ids]
   return res
 
-def get_objects_within_range3d( req ):
-  rospy.loginfo( "SEMAP DB SRVs: get_objects_within_range3d" )
-  res = GetObjectsWithinRange2DResponse()
+def get_distance_between_objects3d( req ):
+  rospy.loginfo( "SEMAP DB SRVs: get_distance_between_objects3d" )
+  res = GetDistanceBetweenObjectsResponse()
 
-  obj = aliased( ObjectInstance )
-  geo = aliased( GeometryModel )
+  ref_obj = aliased( ObjectInstance )
+  ref_geo = aliased( GeometryModel )
 
-  print req.object_types, req.point, req.geometry_type, req.distance
+  tar_obj = aliased( ObjectInstance )
+  tar_geo = aliased( GeometryModel )
 
-  if req.geometry_type not in ["Position3D", "AxisAligned3D", "BoundingBox",  "BoundingHull", "Body"]:
-    rospy.logerror("SEMAP DB SRVs: get_objects_within_range3d was called with %s which is not a valid 2D geometry type" % req.geometry_type)
+  if req.reference_object_geometry_type not in ["Position3D", "AxisAligned3D", "BoundingBox",  "BoundingHull", "Body"]:
+    rospy.logerror("SEMAP DB SRVs: get_distance_between_objects3d was called with %s which is not a valid 2D geometry type" % req.reference_object_geometry_type)
   else:
-      rospy.loginfo("SEMAP DB SRVs: get_objects_within_range3d tries to find em")
+    if req.reference_object_types:
+      ref_ids = any_obj_types_ids(ref_obj, req.reference_object_types)
+    else:
+      ref_ids = any_obj_ids(ref_obj)
 
-      if req.object_types:
-        obj_ids = any_obj_types_ids(obj, req.object_types)
-      else:
-        obj_ids = any_obj_ids(obj)
+    if req.target_object_types:
+      tar_ids = any_obj_types_ids(tar_obj, req.target_object_types)
+    else:
+      tar_ids = any_obj_ids(tar_obj)
 
-      if req.geometry_type == "Body":
-        if req.fully_within:
-          ids = db().query( obj.id ).filter( obj.id.in_( obj_ids ), \
-                                             obj.absolute_description_id == geo.geometry_desc, geo.type == req.geometry_type, \
-                                             ST_3DDFullyWithin(fromPoint3D(req.point), geo.geometry, req.distance)
-                                            ).all()
+    if req.max_distance:
+      distance = ST_3DMaxDistance(ref_geo.geometry, tar_geo.geometry)
+      line = ST_3DLongestLine(ref_geo.geometry, tar_geo.geometry)
+    else:
+      distance = ST_3DDistance(ref_geo.geometry, tar_geo.geometry)
+      line = ST_3DShortestLine(ref_geo.geometry, tar_geo.geometry)
+
+    if req.return_points:
+      query = db().query( ref_obj.id, tar_obj.id, distance, line).\
+                   filter( ref_obj.id.in_( ref_ids ), tar_obj.id.in_( tar_ids ), \
+                           ref_obj.absolute_description_id == ref_geo.abstraction_desc,
+                           tar_obj.absolute_description_id == tar_geo.abstraction_desc,
+                           ref_geo.type == req.reference_object_geometry_type,
+                           tar_geo.type == req.target_object_geometry_type )
+    else:
+      query = db().query( ref_obj.id, tar_obj.id, distance).\
+           filter( ref_obj.id.in_( ref_ids ), tar_obj.id.in_( tar_ids ), \
+                   ref_obj.absolute_description_id == ref_geo.abstraction_desc,
+                   tar_obj.absolute_description_id == tar_geo.abstraction_desc,
+                   ref_geo.type == req.reference_object_geometry_type,
+                   tar_geo.type == req.target_object_geometry_type )
+
+    if req.min_range:
+      query = query.filter( distance > req.min_range )
+
+    if req.min_range:
+      query = query.filter( distance < req.max_range )
+
+    if req.sort_descending:
+      query = query.order_by( desc(distance) )
+    else:
+      query = query.order_by( distance )
+
+    results = query.all()
+
+    if req.return_points:
+      for i, j, dist, points in results:
+        pair = ObjectPair()
+        pair.reference_id = i
+        pair.target_id = j
+        if req.max_distance:
+          pair.max_dist = dist
+          pair.max_dist_line[0] = toPoint3D( db().execute( ST_PointN( points, 1 ) ).scalar() )
+          pair.max_dist_line[1] = toPoint3D( db().execute( ST_PointN( points, 2 ) ).scalar() )
         else:
-          # use ST_Buffer to create a circle and check for overlap?
-          ids = db().query( obj.id ).filter( obj.id.in_( obj_ids ), \
-                                             obj.absolute_description_id == geo.geometry_desc, geo.type == req.geometry_type, \
-                                             ST_3DDWithin(fromPoint2D(req.point), geo.geometry, req.distance)
-                                            ).all()
-      else:
-        if req.fully_within:
-          ids = db().query( obj.id ).filter( obj.id.in_( obj_ids ), \
-                                             obj.absolute_description_id == geo.abstraction_desc, geo.type == req.geometry_type, \
-                                             ST_3DDFullyWithin(fromPoint3D(req.point), geo.geometry, req.distance)
-                                            ).all()
+          pair.min_dist = dist
+          pair.min_dist_line[0] = toPoint3D( db().execute( ST_PointN( points, 1 ) ).scalar() )
+          pair.min_dist_line[1] = toPoint3D( db().execute( ST_PointN( points, 2 ) ).scalar() )
+        res.pairs.append(pair)
+    else:
+      for i, j, dist in results:
+        pair = ObjectPair()
+        pair.reference_id = i
+        pair.target_id = j
+        if req.max_distance:
+          pair.max_dist = dist
         else:
-          # use ST_Buffer to create a circle and check for overlap?
-          ids = db().query( obj.id ).filter( obj.id.in_( obj_ids ), \
-                                             obj.absolute_description_id == geo.abstraction_desc, geo.type == req.geometry_type, \
-                                             ST_3DDWithin(fromPoint2D(req.point), geo.geometry, req.distance)
-                                            ).all()
+          pair.min_dist = dist
+        res.pairs.append(pair)
 
-  res.ids = [id for id, in ids]
   return res
 
-def get_objects_within_range3d( req ):
-  rospy.loginfo( "SEMAP DB SRVs: get_objects_within_range3d" )
-  res = GetObjectsWithinRange2DResponse()
+def get_objects_within_range( req ):
+  rospy.loginfo( "SEMAP DB SRVs: get_objects_within_range" )
+  res = GetObjectsWithinRangeResponse()
 
-  obj = aliased( ObjectInstance )
-  geo = aliased( GeometryModel )
+  tar_obj = aliased( ObjectInstance )
+  tar_geo = aliased( GeometryModel )
 
-  print req.object_types, req.point, req.geometry_type, req.distance
-
-  if req.geometry_type not in ["Position3D", "AxisAligned3D", "BoundingBox",  "BoundingHull", "Body"]:
-    rospy.logerror("SEMAP DB SRVs: get_objects_within_range3d was called with %s which is not a valid 2D geometry type" % req.geometry_type)
+  if req.target_object_types:
+    tar_ids = any_obj_types_ids(tar_obj, req.target_object_types)
   else:
-      rospy.loginfo("SEMAP DB SRVs: get_objects_within_range3d tries to find em")
+    tar_ids = any_obj_ids(tar_obj)
 
-      if req.object_types:
-        obj_ids = any_obj_types_ids(obj, req.object_types)
-      else:
-        obj_ids = any_obj_ids(obj)
+  if req.fully_within:
+    operator = ST_3DDFullyWithin(fromPoint3D(req.reference_point), tar_geo.geometry, req.distance)
+  else:
+    operator = ST_3DDWithin(fromPoint3D(req.reference_point), tar_geo.geometry, req.distance)
 
-      if req.geometry_type == "Body":
-        if req.fully_within:
-          ids = db().query( obj.id ).filter( obj.id.in_( obj_ids ), \
-                                             obj.absolute_description_id == geo.geometry_desc, geo.type == req.geometry_type, \
-                                             ST_3DDFullyWithin(fromPoint3D(req.point), geo.geometry, req.distance)
-                                            ).all()
-        else:
-          # use ST_Buffer to create a circle and check for overlap?
-          ids = db().query( obj.id ).filter( obj.id.in_( obj_ids ), \
-                                             obj.absolute_description_id == geo.geometry_desc, geo.type == req.geometry_type, \
-                                             ST_3DDWithin(fromPoint2D(req.point), geo.geometry, req.distance)
-                                            ).all()
-      else:
-        if req.fully_within:
-          ids = db().query( obj.id ).filter( obj.id.in_( obj_ids ), \
-                                             obj.absolute_description_id == geo.abstraction_desc, geo.type == req.geometry_type, \
-                                             ST_3DDFullyWithin(fromPoint3D(req.point), geo.geometry, req.distance)
-                                            ).all()
-        else:
-          # use ST_Buffer to create a circle and check for overlap?
-          ids = db().query( obj.id ).filter( obj.id.in_( obj_ids ), \
-                                             obj.absolute_description_id == geo.abstraction_desc, geo.type == req.geometry_type, \
-                                             ST_3DDWithin(fromPoint2D(req.point), geo.geometry, req.distance)
-                                            ).all()
+  results = db().query( tar_obj.id, ST_3DDistance( fromPoint3D(req.reference_point), tar_geo.geometry), ST_3DMaxDistance( fromPoint3D(req.reference_point), tar_geo.geometry), ST_3DClosestPoint(tar_geo.geometry, fromPoint3D(req.reference_point)) ).\
+                  filter( tar_obj.id.in_( tar_ids ), tar_obj.absolute_description_id == tar_geo.abstraction_desc, tar_geo.type == req.target_object_geometry_type, operator).\
+                  order_by( ST_3DDistance( fromPoint3D(req.reference_point), tar_geo.geometry) ).all()
 
-  res.ids = [id for id, in ids]
+  for i, min, max, point in results:
+    print i, min, max, point
+    pair = ObjectPair()
+    pair.reference_id = -1
+    pair.target_id = i
+    pair.max_dist = max
+    pair.max_dist_line[0] = req.reference_point
+    pair.max_dist_line[1] = toPoint3D( point )
+    pair.min_dist = min
+    pair.min_dist_line[0] = req.reference_point
+    pair.min_dist_line[1] = toPoint3D( point )
+    res.pairs.append(pair)
+
   return res
 
 def get_directional_relations2d( req ):
@@ -200,7 +228,7 @@ def get_directional_relations2d( req ):
   geo2 = aliased( GeometryModel )
 
   if req.geometry_type not in ["Position2D", "AxisAligned2D", "FootprintBox",  "FootprintHull"]:
-    rospy.logerror("SEMAP DB SRVs: get_directional_relations2d was called with %s which is not a valid 2D geometry type" % req.geometry_type)
+    rospy.logerr("SEMAP DB SRVs: get_directional_relations2d was called with %s which is not a valid 2D geometry type" % req.geometry_type)
   else:
       rospy.loginfo("SEMAP DB SRVs: get_directional_relations2d tries to find em")
 
@@ -208,62 +236,61 @@ def get_directional_relations2d( req ):
                                          obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == req.geometry_type, \
                                          obj2.id ==  req.target_id, \
                                          obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == req.geometry_type,
-                                         geo1.geometry.above(geo2.geometry) ).count():
-        res.relations.append("above_of")
+                                         geo2.geometry.above(geo1.geometry) ).count():
+        res.relations.append("gm_strict-above-of")
 
       elif db().query( obj1.id, obj2.id ).filter(obj1.id == req.reference_id, \
                                          obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == req.geometry_type, \
                                          obj2.id ==  req.target_id, \
                                          obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == req.geometry_type,
-                                         geo1.geometry.overlaps_or_above(geo2.geometry) ).count():
-        res.relations.append("partially_above_of")
+                                         geo2.geometry.overlaps_or_above(geo1.geometry) ).count():
+        res.relations.append("gm_relaxed-above-of")
 
 
       if db().query( obj1.id, obj2.id ).filter(obj1.id == req.reference_id, \
                                          obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == req.geometry_type, \
                                          obj2.id ==  req.target_id, \
                                          obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == req.geometry_type,
-                                         geo1.geometry.below(geo2.geometry) ).count():
-        res.relations.append("below_of")
+                                         geo2.geometry.below(geo1.geometry) ).count():
+        res.relations.append("gm_strict-below-of")
 
 
       elif db().query( obj1.id, obj2.id ).filter(obj1.id == req.reference_id, \
                                          obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == req.geometry_type, \
                                          obj2.id ==  req.target_id, \
                                          obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == req.geometry_type,
-                                         geo1.geometry.overlaps_or_below(geo2.geometry) ).count():
-        res.relations.append("partially_below_of")
+                                         geo2.geometry.overlaps_or_below(geo1.geometry) ).count():
+        res.relations.append("gm_relaxed-below-of")
 
       if db().query( obj1.id, obj2.id ).filter(obj1.id == req.reference_id, \
                                          obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == req.geometry_type, \
                                          obj2.id ==  req.target_id, \
                                          obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == req.geometry_type,
-                                         geo1.geometry.to_left(geo2.geometry) ).count():
-        res.relations.append("left_of")
+                                         geo2.geometry.to_left(geo1.geometry) ).count():
+        res.relations.append("gm_strict-left-of")
 
       elif db().query( obj1.id, obj2.id ).filter(obj1.id == req.reference_id, \
                                          obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == req.geometry_type, \
                                          obj2.id ==  req.target_id, \
                                          obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == req.geometry_type,
-                                         geo1.geometry.overlaps_or_to_left(geo2.geometry) ).count():
-        res.relations.append("partially_left_of")
+                                         geo2.geometry.overlaps_or_to_left(geo1.geometry) ).count():
+        res.relations.append("gm_relaxed-left-of")
 
       if db().query( obj1.id, obj2.id ).filter(obj1.id == req.reference_id, \
                                          obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == req.geometry_type, \
                                          obj2.id ==  req.target_id, \
                                          obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == req.geometry_type,
-                                         geo1.geometry.to_right(geo2.geometry) ).count():
-        res.relations.append("right_of")
+                                         geo2.geometry.to_right(geo1.geometry) ).count():
+        res.relations.append("gm_strict-right-of")
 
       elif db().query( obj1.id, obj2.id ).filter(obj1.id == req.reference_id, \
                                          obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == req.geometry_type, \
                                          obj2.id ==  req.target_id, \
                                          obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == req.geometry_type,
-                                         geo1.geometry.overlaps_or_to_right(geo2.geometry) ).count():
-        res.relations.append("partially_right_of")
+                                         geo2.geometry.overlaps_or_to_right(geo1.geometry) ).count():
+        res.relations.append("gm_relaxed-right-of")
 
   return res
-
 
 def test_directional_relations2d( req ):
   rospy.loginfo( "SEMAP DB SRVs: test_directional_relations2d" )
@@ -289,6 +316,150 @@ def test_directional_relations2d( req ):
                                          #geo1.geometry.to_left(geo2.geometry) ).all()
 
 
+#string[] reference_object_types
+#int32[] reference_object_ids
+#string[] target_object_types
+#---
+#int32[] target_object_ids
+
+def get_objects_within_object( req ):
+  rospy.loginfo( "SEMAP DB SRVs: get_objects_within_object" )
+  res = GetObjectsWithinObjectResponse()
+
+  obj1 = aliased( ObjectInstance )
+  geo1 = aliased( GeometryModel )
+  obj2 = aliased( ObjectInstance )
+  geo2 = aliased( GeometryModel )
+
+  if req.target_object_types:
+    obj2_ids = any_obj_types_ids(obj2, req.target_object_types)
+  else:
+    obj2_ids = any_obj_ids(obj2)
+
+  print req.reference_object_id
+  print req.target_object_types
+  print obj2_ids.all()
+  rospy.loginfo("SEMAP DB SRVs: test_containment_relations3d tries to find em")
+
+  ids = db().query( obj2.id ).\
+          filter(obj1.id == req.reference_object_id, obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == "BoundingBox", \
+                 obj2.id.in_( obj2_ids ), obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "BoundingBox", \
+                 SFCGAL_Contains3D( geo1.geometry, geo2.geometry)
+                ).all()
+
+  print ids
+  res.target_object_ids = [id for id, in ids]
+
+  return res
+
+def get_containment_pairs( req ):
+  rospy.loginfo( "SEMAP DB SRVs: get_containment_pairs" )
+  res = GetObjectLocation()
+
+  obj1 = aliased( ObjectInstance )
+  geo1 = aliased( GeometryModel )
+
+  obj2 = aliased( ObjectInstance )
+  geo2 = aliased( GeometryModel )
+
+  if req.reference_object_types:
+    obj1_ids = any_obj_types_ids(obj1, req.refrence_object_types)
+  else:
+    obj1_ids = any_obj_ids(obj1)
+
+  if req.target_object_types:
+    obj2_ids = any_obj_types_ids(obj2, req.target_object_types)
+  else:
+    obj2_ids = any_obj_ids(obj2)
+
+  ids = db().query( obj1.id, obj2.id ).\
+          filter(obj1.id.in_( obj1_ids ), obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == "BoundingBox", \
+                 obj2.id.in_( obj2_ids ), obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "BoundingBox", \
+                 SFCGAL_Contains3D( geo1.geometry, geo2.geometry)
+                ).all()
+
+  for i1, i2 in ids:
+    pair = ObjectPair()
+    pair.reference_id = i1
+    pair.relations.append("contains")
+    pair.target_id = i2
+
+  res.target_object_ids = [id for id, in ids]
+
+  return res
+
+def unbind_contained_objects(req):
+  rospy.loginfo( "SEMAP DB SRVs: get_objects_within_object" )
+  res = GetObjectsWithinObjectResponse()
+
+  obj1 = aliased( ObjectInstance )
+  geo1 = aliased( GeometryModel )
+  obj2 = aliased( ObjectInstance )
+  geo2 = aliased( GeometryModel )
+
+  if req.target_object_types:
+    obj2_ids = any_obj_types_ids(obj2, req.target_object_types)
+  else:
+    obj2_ids = any_obj_ids(obj2)
+
+  print req.reference_object_id
+  print req.target_object_types
+  print obj2_ids.all()
+  rospy.loginfo("SEMAP DB SRVs: test_containment_relations3d tries to find em")
+
+  ids = db().query( obj2.id ).\
+          filter(obj1.id == req.reference_object_id, obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == "BoundingBox", \
+                 obj1.frame_id == FrameNode.id,
+                 obj2.id.in_( obj2_ids ), obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "BoundingBox", \
+                 SFCGAL_Contains3D( geo1.geometry, geo2.geometry)
+                ).all()
+
+  res.target_object_ids = [id for id, in ids]
+
+  for id in res.target_object_ids:
+    call_change_frame(id, "world", False)
+
+  return res
+
+def bind_contained_objects( req):
+  rospy.loginfo( "SEMAP DB SRVs: get_objects_within_object" )
+  res = GetObjectsWithinObjectResponse()
+
+  obj1 = aliased( ObjectInstance )
+  geo1 = aliased( GeometryModel )
+  obj2 = aliased( ObjectInstance )
+  geo2 = aliased( GeometryModel )
+
+  if req.target_object_types:
+    obj2_ids = any_obj_types_ids(obj2, req.target_object_types)
+  else:
+    obj2_ids = any_obj_ids(obj2)
+
+  print req.reference_object_id
+  print req.target_object_types
+  print obj2_ids.all()
+  rospy.loginfo("SEMAP DB SRVs: test_containment_relations3d tries to find em")
+
+  ids = db().query( obj2.id ).\
+          filter(obj1.id == req.reference_object_id, obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == "BoundingBox", \
+                 obj1.frame_id == FrameNode.id,
+                 obj2.id.in_( obj2_ids ), obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "BoundingBox", \
+                 SFCGAL_Contains3D( geo1.geometry, geo2.geometry)
+                ).all()
+
+  frame_name = db().query( FrameNode.name ).\
+          filter(obj1.id == req.reference_object_id, obj1.frame_id == FrameNode.id).scalar()
+
+  print 'frame_name', frame_name
+
+  res.target_object_ids = [id for id, in ids]
+
+  if frame_name:
+    for id in res.target_object_ids:
+      call_change_frame(id, frame_name, False)
+
+  return res
+
 def test_containment_relations3d( req ):
   rospy.loginfo( "SEMAP DB SRVs: test_containment_relations3d" )
   res = GetDirectionalRelations2DResponse()
@@ -298,12 +469,10 @@ def test_containment_relations3d( req ):
   obj2 = aliased( ObjectInstance )
   geo2 = aliased( GeometryModel )
 
-  rospy.loginfo("SEMAP DB SRVs: test_containment_relations3d tries to find em")
-
   geos = db().query(  SFCGAL_Contains3D( geo1.geometry, geo2.geometry) ).\
           filter(obj1.id == req.reference_id, \
                  obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == "BoundingBox", \
-                 obj2.id ==  req.target_id, \
+                 obj2.id == req.target_id, \
                  obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "BoundingBox" ).all()
 
   print geos
@@ -333,46 +502,17 @@ def get_directional_relations3d( req ):
   geo2 = aliased( GeometryModel )
 
   if False: #req.geometry_type not in ["Position2D", "AxisAligned2D", "FootprintBox",  "FootprintHull"]:
-    rospy.logerror("SEMAP DB SRVs: get_directional_relations2d was called with %s which is not a valid 2D geometry type" % req.geometry_type)
+    rospy.logerror("SEMAP DB SRVs: get_directional_relations3d was called with %s which is not a valid 2D geometry type" % req.geometry_type)
   else:
-    rospy.loginfo("SEMAP DB SRVs: get_directional_relations2d tries to find em")
-
-    '''
-    "FrontExtrusion"
-    "FrontRightExtrusion"
-    "FrontRightTopExtrusion"
-    "FrontRightBotExtrusion"
-    "FrontLeftExtrusion"
-    "FrontLeftTopExtrusion"
-    "FrontLeftBotExtrusion"
-    "FrontTopExtrusion"
-    "FrontBotExtrusion"
-    "RightExtrusion"
-    "RightTopExtrusion"
-    "RightBotExtrusion"
-    "LeftExtrusion"
-    "LeftTopExtrusion"
-    "LeftBotExtrusion"
-    "TopExtrusion"
-    "BotExtrusion"
-    "BackExtrusion"
-    "BackRightExtrusion"
-    "BackRightTopExtrusion"
-    "BackRightBotExtrusion"
-    "BackTopExtrusion"
-    "BackBotExtrusion"
-    "BackLeftExtrusion"
-    "BackLeftTopExtrusion"
-    "BackLeftBotExtrusion"
-    '''
+    rospy.loginfo("SEMAP DB SRVs: get_directional_relation32d tries to find em")
 
     projection_relations = {}
-    projection_relations["infront-of"] = ["FrontExtrusion"]
-    projection_relations["behind-of"] = ["BackExtrusion"]
-    projection_relations["left-of"] = ["LeftExtrusion"]
-    projection_relations["right-of"] = ["RightExtrusion"]
-    projection_relations["above-of"] = ["TopExtrusion"]
-    projection_relations["below-of"] = ["BotExtrusion"]
+    projection_relations["infront-of"] = ["FrontProjection"]
+    projection_relations["behind-of"]  = ["BackProjection"]
+    projection_relations["left-of"]    = ["LeftProjection"]
+    projection_relations["right-of"]   = ["RightProjection"]
+    projection_relations["above-of"]   = ["TopProjection"]
+    projection_relations["below-of"]   = ["BotProjection"]
 
     for relation in projection_relations.keys():
 
@@ -391,57 +531,190 @@ def get_directional_relations3d( req ):
                      obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "BoundingBox" ).scalar()
 
       if strict:
-        res.relations.append("proj_strictly" + relation)
+        res.relations.append("ps_strict-" + relation)
 
       if relaxed:
-        res.relations.append("proj_relaxed" + relation)
+        res.relations.append("ps_relaxed-" + relation)
 
     halfspace_relations = {}
-
-    halfspace_relations["infront-of"] = \
-      ["FrontExtrusion", "FrontLeftExtrusion", "FrontRightExtrusion", "FrontTopExtrusion", "FrontBotExtrusion", "FrontLeftTopExtrusion", "FrontLeftBotExtrusion", "FrontRightTopExtrusion", "FrontRightBotExtrusion"]
-    halfspace_relations["behind-of"] = \
-      ["BackExtrusion", "BackLeftExtrusion", "BackRightExtrusion", "BackTopExtrusion", "BackBotExtrusion", "BackLeftTopExtrusion", "BackLeftBotExtrusion", "BackRightTopExtrusion", "BackRightBotExtrusion"]
-    halfspace_relations["left-of"] = \
-      ["FrontLeftExtrusion", "FrontLeftTopExtrusion", "FrontLeftBotExtrusion", "LeftExtrusion", "LeftTopExtrusion", "LeftBotExtrusion", "BackLeftExtrusion", "BackLeftTopExtrusion", "BackLeftBotExtrusion"]
-    halfspace_relations["right-of"] = \
-      ["FrontRightExtrusion", "FrontRightTopExtrusion", "FrontRightBotExtrusion", "RightExtrusion", "RightTopExtrusion", "RightBotExtrusion", "BackRightExtrusion", "BackRightTopExtrusion", "BackRightBotExtrusion"]
-    halfspace_relations["above-of"] = \
-      ["FrontRightTopExtrusion", "FrontLeftTopExtrusion", "FrontTopExtrusion", "RightTopExtrusion", "LeftTopExtrusion", "TopExtrusion", "BackRightTopExtrusion", "BackTopExtrusion", "LeftTopExtrusion"]
-    halfspace_relations["below-of"] = \
-      ["FrontRightBotExtrusion", "FrontLeftBotExtrusion", "FrontBotExtrusion", "RightBotExtrusion", "LeftBotExtrusion", "BotExtrusion", "BackRightBotExtrusion", "BackBotExtrusion", "LeftBotExtrusion"]
+    halfspace_relations["infront-of"] = ["FrontHalfspace"]
+    halfspace_relations["behind-of"]  = ["BackHalfspace"]
+    halfspace_relations["left-of"]    = ["LeftHalfspace"]
+    halfspace_relations["right-of"]   = ["RightHalfspace"]
+    halfspace_relations["above-of"]   = ["TopHalfspace"]
+    halfspace_relations["below-of"]   = ["BotHalfspace"]
 
     for relation in halfspace_relations.keys():
-      strict = False
-      relaxed = False
+
       for region in halfspace_relations[relation]:
 
-        strict = strict or db().query(  SFCGAL_Contains3D( geo1.geometry, geo2.geometry) ).\
+        strict = db().query(  SFCGAL_Contains3D( geo1.geometry, geo2.geometry) ).\
               filter(obj1.id == req.reference_id, \
                      obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == region, \
                      obj2.id ==  req.target_id, \
                      obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "BoundingBox" ).scalar()
 
-        relaxed = relaxed or db().query(  SFCGAL_Intersects3D( geo1.geometry, geo2.geometry) ).\
+        relaxed = db().query(  SFCGAL_Intersects3D( geo1.geometry, geo2.geometry) ).\
               filter(obj1.id == req.reference_id, \
                      obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == region, \
                      obj2.id ==  req.target_id, \
                      obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "BoundingBox" ).scalar()
 
       if strict:
-        res.relations.append("hs_strictly-" + relation)
+        res.relations.append("hs_strict-" + relation)
 
-      if relaxed:
+      if relaxed :
         res.relations.append("hs_relaxed-" + relation)
 
   return res
-'''
-      distance = db().query( SFCGAL_Distance3D( geo1.geometry, geo2.geometry) ).\
+
+def get_objects_on_obb3d( req ):
+
+  rospy.loginfo( "SEMAP DB SRVs: get_objects_on_obb3d" )
+
+  res = GetObjectsOnOBB3DResponse()
+
+  obj1 = aliased( ObjectInstance )
+  geo1 = aliased( GeometryModel )
+  geo3 = aliased( GeometryModel )
+
+  obj2 = aliased( ObjectInstance )
+  geo2 = aliased( GeometryModel )
+
+  #if req.geometry_type not in ["BoundingBox"]:
+  #  rospy.logerror("SEMAP DB SRVs: get_objects_on_obb3d was called with %s which is not a valid D geometry type" % req.geometry_type)
+  #else:
+  #    rospy.loginfo("SEMAP DB SRVs: get_objects_on_obb3d tries to find em")
+
+  if req.reference_object_types:
+    obj1_ids = any_obj_types_ids(obj1, req.reference_object_types).all()
+  else:
+    obj1_ids = any_obj_ids(obj1).all()
+
+  print 'ref', obj1_ids
+
+  print req.target_object_types
+
+  if req.target_object_types:
+    obj2_ids = any_obj_types_ids(obj2, req.target_object_types).all()
+  else:
+    obj2_ids = any_obj_ids(obj2).all()
+
+  print 'target', obj2_ids
+
+  ids = db().query( obj1.id, obj2.id ).filter( obj1.id.in_( obj1_ids ), obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == "BoundingBox", \
+                                               obj1.id.in_( obj1_ids ), obj1.absolute_description_id == geo3.abstraction_desc, geo3.type == "TopProjection", \
+                                               obj2.id.in_( obj2_ids ), obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "BoundingBox", \
+                                               SFCGAL_Contains3D( geo3.geometry, geo2.geometry),
+                                               SFCGAL_Distance3D( geo1.geometry, geo2.geometry) < 0.05
+                                            ).all()
+  for i, d in ids:
+    pair = ObjectPair()
+    pair.reference_id = i
+    pair.target_id = d
+    pair.relations.append("supports")
+    res.pairs.append(pair)
+    pair = ObjectPair()
+    pair.reference_id = d
+    pair.target_id = i
+    pair.relations.append("is-on")
+    res.pairs.append(pair)
+
+  return res
+
+def get_objects_in_obb3d( req ):
+
+  rospy.loginfo( "SEMAP DB SRVs: get_objects_in_obb3d" )
+
+  res = GetObjectsOnOBB3DResponse()
+
+  obj1 = aliased( ObjectInstance )
+  geo1 = aliased( GeometryModel )
+
+  obj2 = aliased( ObjectInstance )
+  geo2 = aliased( GeometryModel )
+
+  if req.reference_object_types:
+    obj1_ids = any_obj_types_ids(obj1, req.reference_object_types).all()
+  else:
+    obj1_ids = any_obj_ids(obj1).all()
+
+  if req.target_object_types:
+    obj2_ids = any_obj_types_ids(obj2, req.target_object_types).all()
+  else:
+    obj2_ids = any_obj_ids(obj2).all()
+
+  ids = db().query( obj1.id, obj2.id ).filter( obj1.id.in_( obj1_ids ), obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == "BoundingBox", \
+                                               obj2.id.in_( obj2_ids ), obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "BoundingBox", \
+                                               SFCGAL_Contains3D( geo1.geometry, geo2.geometry)
+                                            ).all()
+  for i, d in ids:
+    pair = ObjectPair()
+    pair.reference_id = i
+    pair.target_id = d
+    pair.relations.append("contains")
+    res.pairs.append(pair)
+    pair = ObjectPair()
+    pair.reference_id = d
+    pair.target_id = i
+    pair.relations.append("contained-by")
+    res.pairs.append(pair)
+
+  return res
+
+  '''
+  "FrontExtrusion"
+  "FrontRightExtrusion"
+  "FrontRightTopExtrusion"
+  "FrontRightBotExtrusion"
+  "FrontLeftExtrusion"
+  "FrontLeftTopExtrusion"
+  "FrontLeftBotExtrusion"
+  "FrontTopExtrusion"
+  "FrontBotExtrusion"
+  "RightExtrusion"
+  "RightTopExtrusion"
+  "RightBotExtrusion"
+  "LeftExtrusion"
+  "LeftTopExtrusion"
+  "LeftBotExtrusion"
+  "TopExtrusion"
+  "BotExtrusion"
+  "BackExtrusion"
+  "BackRightExtrusion"
+  "BackRightTopExtrusion"
+  "BackRightBotExtrusion"
+  "BackTopExtrusion"
+  "BackBotExtrusion"
+  "BackLeftExtrusion"
+  "BackLeftTopExtrusion"
+  "BackLeftBotExtrusion"
+  halfspace_relations["infront-of"] = \
+    ["FrontExtrusion", "FrontLeftExtrusion", "FrontRightExtrusion", "FrontTopExtrusion", "FrontBotExtrusion", "FrontLeftTopExtrusion", "FrontLeftBotExtrusion", "FrontRightTopExtrusion", "FrontRightBotExtrusion"]
+  halfspace_relations["behind-of"] = \
+    ["BackExtrusion", "BackLeftExtrusion", "BackRightExtrusion", "BackTopExtrusion", "BackBotExtrusion", "BackLeftTopExtrusion", "BackLeftBotExtrusion", "BackRightTopExtrusion", "BackRightBotExtrusion"]
+  halfspace_relations["left-of"] = \
+    ["FrontLeftExtrusion", "FrontLeftTopExtrusion", "FrontLeftBotExtrusion", "LeftExtrusion", "LeftTopExtrusion", "LeftBotExtrusion", "BackLeftExtrusion", "BackLeftTopExtrusion", "BackLeftBotExtrusion"]
+  halfspace_relations["right-of"] = \
+    ["FrontRightExtrusion", "FrontRightTopExtrusion", "FrontRightBotExtrusion", "RightExtrusion", "RightTopExtrusion", "RightBotExtrusion", "BackRightExtrusion", "BackRightTopExtrusion", "BackRightBotExtrusion"]
+  halfspace_relations["above-of"] = \
+    ["FrontRightTopExtrusion", "FrontLeftTopExtrusion", "FrontTopExtrusion", "RightTopExtrusion", "LeftTopExtrusion", "TopExtrusion", "BackRightTopExtrusion", "BackTopExtrusion", "LeftTopExtrusion"]
+  halfspace_relations["below-of"] = \
+    ["FrontRightBotExtrusion", "FrontLeftBotExtrusion", "FrontBotExtrusion", "RightBotExtrusion", "LeftBotExtrusion", "BotExtrusion", "BackRightBotExtrusion", "BackBotExtrusion", "LeftBotExtrusion"]
+  for relation in halfspace_relations.keys():
+    strict = False
+    relaxed = False
+    for region in halfspace_relations[relation]:
+
+      strict = strict or db().query(  SFCGAL_Contains3D( geo1.geometry, geo2.geometry) ).\
             filter(obj1.id == req.reference_id, \
-                   obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == "BoundingBox", \
+                   obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == region, \
                    obj2.id ==  req.target_id, \
                    obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "BoundingBox" ).scalar()
-      print distance
-      if distance < 0.05:
-        res.relations.append("on")
-'''
+
+      relaxed = relaxed or db().query(  SFCGAL_Intersects3D( geo1.geometry, geo2.geometry) ).\
+            filter(obj1.id == req.reference_id, \
+                   obj1.absolute_description_id == geo1.abstraction_desc, geo1.type == region, \
+                   obj2.id ==  req.target_id, \
+                   obj2.absolute_description_id == geo2.abstraction_desc, geo2.type == "BoundingBox" ).scalar()
+  '''
