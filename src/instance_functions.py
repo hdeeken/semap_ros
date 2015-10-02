@@ -85,13 +85,79 @@ def get_object_instances( req ):
   rospy.loginfo( "SEMAP DB SRVs: get_object_instances" )
   then = rospy.Time.now()
   res = GetObjectInstancesResponse()
-  objects = db().query( ObjectInstance ).filter( ObjectInstance.id.in_( req.ids ) ).all()
-  for obj in objects:
-    then2 = rospy.Time.now()
-    ros = obj.toROS()
-    res.objects.append( ros )
-    rospy.loginfo( "Object in %r seconds" % ( ( rospy.Time.now() - then2 ).to_sec() ) )
-  rospy.loginfo( "Get Objects took %f seconds in total." % ( rospy.Time.now() - then ).to_sec() )
+
+  if True:
+    inst = aliased(ObjectInstance)
+    desc = aliased(ObjectDescription)
+    frame = aliased(FrameNode)
+
+    descs = db().query( desc.id, desc.type, desc ).filter( inst.id.in_( req.ids ), inst.relative_description_id == desc.id ).distinct().all()
+    descs_time = (rospy.Time.now() - then ).to_sec()
+    #print descs
+    #for id, type, desc in descs:
+      #print id, type
+    resultset ={}
+    for id, type, desc in descs:
+      resultset[id] = desc.toROS()
+    #print resultset
+    ros_time = (rospy.Time.now() - then ).to_sec() - descs_time
+    insts = db().query( inst.id, inst.name, inst.alias, inst.relative_description_id, frame ).filter( inst.id.in_( req.ids ), inst.frame_id == frame.id ).all()
+    insts_time = (rospy.Time.now() - then ).to_sec() - descs_time - ros_time
+
+    for id, name, alias, desc_id, frame in insts:
+      #print id, alias, desc_id, frame
+
+      ros = ROSObjectInstance()
+      ros.id = id
+      ros.name = name
+
+      if alias:
+        ros.alias = alias
+      else:
+        ros.alias = ""
+
+      if frame:
+        ros.pose = frame.toROSPoseStamped()
+      else:
+        ros.pose = ROSPoseStamped()
+
+      if desc_id:
+        ros.description = resultset[desc_id]#.toROS()
+      else:
+        ros.description = ROSObjectDescription()
+
+      if True:#False:
+        abs_desc = db().query( ObjectDescription ).filter( ObjectInstance.id == id, ObjectInstance.absolute_description_id == ObjectDescription.id ).scalar()
+        ros.absolute = abs_desc.toROS()
+      else:
+         ros.absolute = ROSObjectDescription()
+      res.objects.append( ros )
+    packaging_time = (rospy.Time.now() - then ).to_sec() - descs_time - ros_time- insts_time
+
+
+    rospy.loginfo( "# Descriptions : %d" % len(descs) )
+    rospy.loginfo( "# Instances    : %d" % len(insts) )
+
+    rospy.loginfo( "  Descriptions  : %fs" % descs_time )
+    rospy.loginfo( "  ROS Conversion: %fs" % ros_time )
+    rospy.loginfo( "  Instances     : %fs" % insts_time)
+    rospy.loginfo( "  Packaging     : %fs" % packaging_time )
+    rospy.loginfo( "Total             %fs" % ( rospy.Time.now() - then ).to_sec() )
+
+  then2 = rospy.Time.now()
+
+  if False:
+    rospy.loginfo( "SEMAP DB SRVs: get_object_instances NAIVE" )
+    objects = db().query( ObjectInstance ).filter( ObjectInstance.id.in_( req.ids ) ).all()
+    obj_time = (rospy.Time.now() - then2 ).to_sec()
+    for obj in objects:
+      ros = obj.toROS()
+      res.objects.append( ros )
+    packaging2_time = (rospy.Time.now() - then2 ).to_sec() - obj_time
+    rospy.loginfo( "  Objects       : %fs" % obj_time )
+    rospy.loginfo( "  Packaging     : %fs" % packaging2_time )
+    rospy.loginfo( "Total             %fs" % ( rospy.Time.now() - then2 ).to_sec() )
+
   return res
 
 def get_object_instances_ids( req ):
@@ -174,20 +240,43 @@ def update_transform( req ):
   return res
 
 def change_frame( req ):
-  rospy.loginfo( "SEMAP DB SRVs: change frame" )
+  rospy.logdebug( "SEMAP DB SRVs: change frame" )
   res = ChangeFrameResponse()
   object = db().query( ObjectInstance ).filter( ObjectInstance.id == req.id ).scalar()
   object.frame.changeFrame( req.frame, req.keep_transform )
   db().commit()
-  update_res = call_update_absolute_descriptions( [ req.id ] )
-  res.ids = update_res.ids
+  if req.keep_transform:
+    update_res = call_update_absolute_descriptions( [ req.id ] )
+    res.ids = update_res.ids
   return res
+
+def get_children( req ):
+  rospy.loginfo( "SEMAP DB SRVs: get_children" )
+  res = GetChildrenResponse()
+  then = rospy.Time.now()
+  object = db().query( ObjectInstance ).filter(ObjectInstance.id == req.id).scalar()
+  rospy.loginfo( "Get Children %fs" % ( rospy.Time.now() - then ).to_sec() )
+  res.ids = object.getAnchestorIDs()
+  return res
+
+def get_environment_children( req ):
+  rospy.loginfo( "SEMAP DB SRVs: get_children" )
+  res = GetChildrenResponse()
+  then = rospy.Time.now()
+  frame = db().query( FrameNode ).filter(FrameNode.name == "world").scalar()
+
+  for key in frame.all_children.keys():
+      child = frame.all_children[key]
+      res.ids.append( child.object_instance.id )
+  rospy.loginfo( "Get Env Children %fs" % ( rospy.Time.now() - then ).to_sec() )
+  return res
+
+
 
 # absolute
 
 def update_absolute_descriptions( req ):
     rospy.loginfo( "SEMAP DB SRVs: update_absolute_description" )
-    then = rospy.Time.now()
     res = UpdateAbsoluteDescriptionsResponse()
     print 'update inst', req.ids
     objects = db().query( ObjectInstance ).filter( ObjectInstance.id.in_( req.ids ) ).all()
@@ -235,7 +324,7 @@ def get_absolute_footprint_polygons( req ):
 
     for model in geos:
       if req.footprint_padding:
-        response.polygons.append( toPolygon2D( db().execute( ST_Buffer( model.geometry , req.footprint_padding, 'endcap=square join=round') ).scalar() ) ) 
+        response.polygons.append( toPolygon2D( db().execute( ST_Buffer( model.geometry , req.footprint_padding, 'endcap=square join=round') ).scalar() ) )
       else:
         response.polygons.append( toPolygon2D( model.geometry ) )
 

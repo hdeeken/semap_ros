@@ -1,4 +1,0 @@
-int32 reference_object_id
-string[] target_object_types
----
-int32[] target_object_ids

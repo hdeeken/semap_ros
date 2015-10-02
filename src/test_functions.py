@@ -15,6 +15,13 @@ from semap_ros.subqueries import *
 SEMAP Spatial Relations Services
 '''
 
+def extrude_polygon( req ):
+  res = ExtrudePolygonResponse()
+  rospy.loginfo( "SEMAP DB SRVs: extrude_polygon" )
+  mesh = db().execute( SFCGAL_Extrude( fromPolygon2D( req.polygon), req.vector.x, req.vector.y, req.vector.z) ).scalar()
+  res.mesh = toPolygonMesh3D( mesh )
+  return res
+
 def get_absolute_geometry( id, type ):
   rospy.loginfo( "SEMAP DB SRVs: get_absolute_geometry" )
   then = rospy.Time.now()
@@ -94,7 +101,6 @@ def binary_relation_test( req ):
     result3.label = 'Union'
     res.results.append( result3 )
   return res
-
 
 #>>> adalias1 = aliased( Address )
 #>>> adalias2 = aliased( Address )

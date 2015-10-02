@@ -12,7 +12,7 @@ def call_add_object_instances(objects):
     request.objects = objects
     add_object_instances_call = rospy.ServiceProxy('add_object_instances', AddObjectInstances)
     response = add_object_instances_call(request)
-    print 'AddObjectInstances service call succeeded!'
+    rospy.logdebug('AddObjectInstances service call succeeded!')
     return response
   except rospy.ServiceException as e:
     return None, "AddObjectInstances service call failed: %s" % e
@@ -25,7 +25,7 @@ def call_rename_object_instance(id, alias):
     request.alias = alias
     call = rospy.ServiceProxy('rename_object_instance', RenameObjectInstance)
     response = call(request)
-    print 'RenameObjectInstance service call succeeded!'
+    rospy.logdebug('RenameObjectInstance service call succeeded!')
     return response
   except rospy.ServiceException as e:
     return None, "RenameObjectInstance service call failed: %s" % e
@@ -38,13 +38,12 @@ def call_switch_object_descriptions(obj_ids, desc_id):
     request.desc_id = desc_id
     call = rospy.ServiceProxy('switch_object_descriptions', SwitchObjectDescriptions)
     response = call(request)
-    print 'SwitchObjectDescriptions service call succeeded!'
+    rospy.logdebug('SwitchObjectDescriptions service call succeeded!')
     return response
   except rospy.ServiceException as e:
     return None, "SwitchObjectDescriptions service call failed: %s" % e
 
 def call_delete_object_instances(ids, keep_children = True, child_frame = "", keep_transform = False):
-  print 'call_delete_object_instances'
   try:
     rospy.wait_for_service('delete_object_instances')
     request = DeleteObjectInstancesRequest()
@@ -54,7 +53,7 @@ def call_delete_object_instances(ids, keep_children = True, child_frame = "", ke
     request.keep_transform = keep_transform
     call = rospy.ServiceProxy('delete_object_instances', DeleteObjectInstances)
     response = call(request)
-    print 'DeleteObjectInstances service call succeeded!'
+    rospy.logdebug('DeleteObjectInstances service call succeeded!')
     return response
   except rospy.ServiceException as e:
     return None, "DeleteObjectInstances service call failed: %s" % e
@@ -64,11 +63,12 @@ def call_delete_object_instances(ids, keep_children = True, child_frame = "", ke
 def call_get_object_instances(ids):
   try:
     rospy.wait_for_service('get_all_object_instances')
+    rospy.loginfo('GetObjectInstances service call...')
     call = rospy.ServiceProxy('get_object_instances', GetObjectInstances)
     request = GetObjectInstancesRequest()
     request.ids = ids
     response = call(request)
-    print 'GetObjectInstances service call succeeded!'
+    rospy.loginfo('GetObjectInstances service call succeeded!')
     return response
   except rospy.ServiceException as e:
     return None, "GetObjectInstances service call failed: %s" % e
@@ -79,7 +79,7 @@ def call_get_object_instances_list():
     call = rospy.ServiceProxy('get_object_instances_list', GetObjectInstancesList)
     request = GetObjectInstancesListRequest()
     response = call(request)
-    print 'GetObjectInstancesList service call succeeded!'
+    rospy.logdebug('GetObjectInstancesList service call succeeded!')
     return response
   except rospy.ServiceException as e:
     return None, "GetObjectInstances service call failed: %s" % e
@@ -91,7 +91,7 @@ def call_copy_object_instances(ids):
     request.ids = ids
     call = rospy.ServiceProxy('copy_object_instances', CopyObjectInstances)
     response = call(request)
-    print 'CopyObjectInstances service call succeeded!'
+    rospy.logdebug('CopyObjectInstances service call succeeded!')
     return response
   except rospy.ServiceException as e:
     return None, "CopyObjectInstances service call failed: %s" % e
@@ -102,7 +102,7 @@ def call_get_all_object_instances():
     get_all_object_instances_call = rospy.ServiceProxy('get_all_object_instances', GetAllObjectInstances)
     request = GetAllObjectInstancesRequest()
     response = get_all_object_instances_call(request)
-    print 'GetAllObjectInstances service call succeeded!'
+    rospy.logdebug('GetAllObjectInstances service call succeeded!')
     return response
   except rospy.ServiceException as e:
     return None, "GetAllObjectInstances service call failed: %s" % e
@@ -117,7 +117,7 @@ def call_get_transform(source, target):
     request.source = source
     request.target = target
     response = call(request)
-    print 'GetTransform services call succeeded!'
+    rospy.logdebug('GetTransform services call succeeded!')
     return response
   except rospy.ServiceException as e:
     return None, "GetTransform service call failed: %s" % e
@@ -130,7 +130,7 @@ def call_set_transform(id, pose):
     request.id = id
     request.pose = pose
     response = call(request)
-    print 'SetTransform service call succeeded!'
+    rospy.logdebug('SetTransform service call succeeded!')
     return True
   except rospy.ServiceException as e:
     return None, "SetTransform service call failed: %s" % e
@@ -143,7 +143,7 @@ def call_update_transform(id, pose):
     request.id = id
     request.pose = pose
     response = update_transform_call(request)
-    print 'UpdateTransform service call succeeded!'
+    rospy.logdebug('UpdateTransform service call succeeded!')
     return response
   except rospy.ServiceException as e:
     return None, "UpdateTransform service call failed: %s" % e
@@ -157,7 +157,7 @@ def call_change_frame(id, frame, keep_transform):
     request.frame = frame
     request.keep_transform = keep_transform
     response = call(request)
-    print 'ChangeFrame service call succeeded!'
+    rospy.logdebug('ChangeFrame service call succeeded!')
     return response
   except rospy.ServiceException as e:
     return None, "ChangeFrame service call failed: %s" % e
@@ -166,13 +166,12 @@ def call_change_frame(id, frame, keep_transform):
 
 def call_update_absolute_descriptions(ids):
   try:
-    rospy.loginfo("HEREE")
     rospy.wait_for_service('update_absolute_descriptions')
     call = rospy.ServiceProxy('update_absolute_descriptions', UpdateAbsoluteDescriptions)
     request = UpdateAbsoluteDescriptionsRequest()
     request.ids = ids
     response = call(request)
-    print 'UpdateAbsoluteDescriptions service call succeeded!'
+    rospy.logdebug('UpdateAbsoluteDescriptions service call succeeded!')
     return response
   except rospy.ServiceException as e:
     return None, "UpdateAbsoluteDescriptions service call failed: %s" % e

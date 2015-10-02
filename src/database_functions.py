@@ -24,3 +24,8 @@ def db_drop_tables(req):
   drop_all()
   rospy.loginfo( "SEMAP DB SRVs: Dropped all tables." )
   return DBDropTablesResponse()
+
+def db_write_graph(req):
+  write_graph()
+  rospy.loginfo( "SEMAP DB SRVs: Wrote DB graph." )
+  return DBDropTablesResponse()

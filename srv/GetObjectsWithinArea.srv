@@ -1,0 +1,8 @@
+geometry_msgs/Polygon reference_polygon
+
+string[] target_object_types
+string target_object_geometry_type
+
+bool fully_within
+---
+semap_msgs/ObjectPair[] pairs

@@ -1,4 +1,0 @@
-string[] reference_object_types
-string[] target_object_types
----
-semap_msgs/ObjectPair[] pairs
