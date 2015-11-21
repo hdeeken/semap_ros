@@ -1,0 +1,14 @@
+string[] reference_object_types
+string reference_object_geometry_type
+
+string[] target_object_types
+string target_object_geometry_type
+
+float32 min_range
+float32 max_range
+
+bool sort_descending
+bool max_distance
+bool return_points
+---
+semap_msgs/ObjectPair[] pairs

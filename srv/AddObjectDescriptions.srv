@@ -1,0 +1,3 @@
+semap_msgs/ObjectDescription[] descriptions
+---
+int32[] ids

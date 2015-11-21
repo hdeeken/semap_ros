@@ -1,0 +1,4 @@
+int32 id
+string type
+---
+int32[] ids

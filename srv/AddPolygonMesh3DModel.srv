@@ -1,0 +1,5 @@
+int32 id
+semap_msgs/PolygonMesh3DModel model
+---
+int32 id
+

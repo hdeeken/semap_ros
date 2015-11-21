@@ -1,0 +1,5 @@
+string[] object_types
+string footprint_type
+float32 footprint_padding
+---
+geometry_msgs/Polygon[] polygons

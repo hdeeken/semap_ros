@@ -1,0 +1,6 @@
+string[] object_types
+string geometry_type
+geometry_msgs/Polygon polygon
+bool fully_within
+---
+int32[] ids

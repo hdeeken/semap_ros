@@ -1,0 +1,3 @@
+int32[] ids
+---
+semap_msgs/ObjectInstance[] objects

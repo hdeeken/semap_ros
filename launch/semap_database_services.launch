@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="user" default="hdeeken"/>
+  <arg name="password" default="mYdB"/>
+  <arg name="host" default="localhost"/>
+  <arg name="database" default="semap_devel"/>
+
+  <node name="semap_database_services" pkg="semap_ros" type="services.py" output="screen">
+    <param name="user" value="$(arg user)"/>
+    <param name="password" value="$(arg password)"/>
+    <param name="host" value="$(arg host)"/>
+    <param name="database" value="$(arg database)"/>
+  </node>
+</launch>

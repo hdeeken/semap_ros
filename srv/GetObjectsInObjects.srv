@@ -1,0 +1,10 @@
+semap_msgs/ObjectConstraint reference
+semap_msgs/ObjectConstraint target
+bool fully_within
+---
+semap_msgs/ObjectPair[] pairs
+semap_msgs/OneToMany[] results
+int32 refs
+int32 tars
+int32 num_tests
+
