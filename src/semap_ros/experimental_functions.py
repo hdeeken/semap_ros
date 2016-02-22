@@ -5,12 +5,13 @@ import roslib; roslib.load_manifest( 'semap_ros' )
 
 from sqlalchemy.orm import aliased, join
 
-from db_model import *
-from db_environment import db
-from semap_ros.srv import *
+from semap.db_model import *
+from semap.db_environment import db
 from semap.ros_postgis_conversion import *
 
+from semap_ros.srv import *
 from semap_ros.subqueries import *
+
 '''
 SEMAP Spatial Relations Services
 '''

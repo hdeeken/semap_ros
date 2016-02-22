@@ -1,20 +1,25 @@
 #!/usr/bin/env python
 
+
+import rospy
+import roslib; roslib.load_manifest('semap_ros')
+
+from sqlalchemy import exc
+
+from semap.db_model import *
+from semap.db_environment import db
+
+from semap.ros_postgis_conversion import *
+from semap_ros.srv import *
+
+from semap_msgs.msg import ObjectDescription as ROSObjectDescription
+from semap_msgs.msg import ObjectInstance as ROSObjectInstance
+
+from visualization_msgs.msg import MarkerArray
+
 '''
 SEMAP DB Service Calls
 '''
-
-import roslib; roslib.load_manifest('semap_ros')
-import rospy
-from sqlalchemy import exc
-
-from db_model import *
-from db_environment import db
-from semap.ros_postgis_conversion import *
-from semap_ros.srv import *
-from semap_msgs.msg import ObjectDescription as ROSObjectDescription
-from semap_msgs.msg import ObjectInstance as ROSObjectInstance
-from visualization_msgs.msg import MarkerArray
 
 def add_root_frame(req):
     if create_root_node(req.frame):

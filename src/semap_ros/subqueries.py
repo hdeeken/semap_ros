@@ -3,14 +3,14 @@
 import rospy
 import roslib; roslib.load_manifest('semap_ros')
 
-from sqlalchemy.orm import aliased, join
 from sqlalchemy import and_, or_
+from sqlalchemy.orm import aliased, join
 
-from db_model import *
-from db_environment import db
+from semap.db_model import *
+from semap.db_environment import db
+
 from semap_ros.srv import *
 from semap.ros_postgis_conversion import *
-
 
 #int32[] ids
 #string[] class_types

@@ -1,20 +1,21 @@
 #!/usr/bin/env python
 
-import roslib; roslib.load_manifest( 'semap_ros' )
 import rospy
+import roslib; roslib.load_manifest( 'semap_ros' )
+
 from sqlalchemy import exc
 from sqlalchemy.orm import aliased, join
 
-from db_model import *
-from db_environment import db
-
-from semap.ros_postgis_conversion import *
-from semap_msgs.msg import ObjectDescription as ROSObjectDescription
+from semap.db_model import *
+from semap.db_environment import db
 
 from semap_ros.srv import *
-from semap_ros.instance_srv_calls import *
+from semap.ros_postgis_conversion import *
 from semap_ros.description_srv_calls import *
-from instance_functions import *
+from semap_ros.instance_functions import *
+from semap_ros.instance_srv_calls import *
+
+from semap_msgs.msg import ObjectDescription as ROSObjectDescription
 
 '''
 SEMAP Object Descriptions Services

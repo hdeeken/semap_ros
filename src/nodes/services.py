@@ -3,19 +3,20 @@
 import rospy
 import roslib; roslib.load_manifest( 'semap_ros' )
 
+from semap.db_environment import *
+from semap.db_environment import db, initializeConnection
+
 from semap_ros.srv import *
+from semap_ros.database_functions import *
+from semap_ros.instance_functions import *
+from semap_ros.description_functions import *
+from semap_ros.tf_functions import *
 
-from tf_functions import *
+from semap_ros.spatial_relations import *
+from semap_ros.topology_functions import *
+from semap_ros.experimental_functions import *
 
-from database_functions import *
-from instance_functions import *
-from description_functions import *
-
-from spatial_relations import *
-from topology_functions import *
-from test_functions import *
-
-from db_environment import db, initializeConnection
+from semap_msgs.msg import *
 
 '''
 SEMAP DB Services
@@ -96,7 +97,7 @@ def semap_services():
   srv_get_objects_within_volume = rospy.Service( 'get_objects_within_volume', GetObjectsWithinVolume, get_objects_within_volume )
 
   # one to many
-  srv_get_objects_within_object = rospy.Service( 'get_objects_within_object', GetObjectsWithinObject, get_objects_within_object )
+  #srv_get_objects_within_object = rospy.Service( 'get_objects_within_object', GetObjectsWithinObject, get_objects_within_object )
   #srv_get_objects_on_object = rospy.Service( 'get_objects_on_object', GetObjectsOnObject, get_objects_on_object )
 
   # many to many
@@ -140,7 +141,6 @@ def semap_services():
   srv_test_object_instances = rospy.Service( 'test_object_instances', GetObjectInstances, test_object_instances )
   srv_unary_relation_test = rospy.Service( 'unary_relation_test', UnaryRelationTest, unary_relation_test )
   srv_binary_relation_test = rospy.Service( 'binary_relation_test', BinaryRelationTest, binary_relation_test )
-
 
   rospy.loginfo( "SEMAP DB Services are running...\n" )
   rospy.spin()

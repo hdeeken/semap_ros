@@ -3,7 +3,8 @@
 import rospy
 import roslib; roslib.load_manifest( 'semap_ros' )
 
-from db_model import *
+from semap.db_model import *
+
 from semap_ros.srv import *
 
 '''

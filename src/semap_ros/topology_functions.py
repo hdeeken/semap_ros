@@ -5,27 +5,25 @@ import roslib; roslib.load_manifest( 'semap_ros' )
 
 from copy import deepcopy
 
+from sqlalchemy import or_, func, desc
 from sqlalchemy.orm import aliased, join
-from sqlalchemy import or_
-from geoalchemy2 import comparator
-from db_model import *
-from sqlalchemy import func
-from db_environment import db
-from semap_ros.srv import *
-from semap.ros_postgis_conversion import *
-
-from spatial_relations import *
-
 from sqlalchemy.types import UserDefinedType
-from sqlalchemy import desc
 try:
     from sqlalchemy.sql.functions import _FunctionGenerator
 except ImportError:  # SQLA < 0.9
     from sqlalchemy.sql.expression import _FunctionGenerator
 
+from geoalchemy2 import comparator
 
+from semap.db_model import *
+from semap.db_environment import db
+
+from semap_ros.srv import *
+from semap.ros_postgis_conversion import *
+from semap_ros.spatial_relations import *
 from semap_ros.subqueries import *
 from semap_ros.instance_srv_calls import *
+
 from semap_msgs.msg import ObjectPair
 
 def bind_objects_on_objects(req):

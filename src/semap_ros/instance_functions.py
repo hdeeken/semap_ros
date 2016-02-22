@@ -3,15 +3,17 @@
 import rospy
 import roslib; roslib.load_manifest( 'semap_ros' )
 
-from db_model import *
-from db_environment import db
-#from db_object_instance import *
-from semap_ros.srv import *
-from semap.ros_postgis_conversion import *
-from semap_msgs.msg import ObjectInstance as ROSObjectInstance
-from semap_ros.instance_srv_calls import *
 from sqlalchemy.orm import aliased, join
+
+from semap.db_model import *
+from semap.db_environment import db
+
+from semap_ros.srv import *
 from semap_ros.subqueries import *
+from semap_ros.instance_srv_calls import *
+from semap.ros_postgis_conversion import *
+
+from semap_msgs.msg import ObjectInstance as ROSObjectInstance
 
 '''
 SEMAP Object Instances Services
@@ -126,11 +128,13 @@ def get_object_instances( req ):
       else:
         ros.description = ROSObjectDescription()
 
-      if True:#False:
+      if False: # parametrize if absolute desc should be returned
+        rospy.loginfo( "# get absolute descriptions" )
         abs_desc = db().query( ObjectDescription ).filter( ObjectInstance.id == id, ObjectInstance.absolute_description_id == ObjectDescription.id ).scalar()
         ros.absolute = abs_desc.toROS()
       else:
-         ros.absolute = ROSObjectDescription()
+        rospy.loginfo( "# skipping absolute descriptions" )
+        ros.absolute = ROSObjectDescription()
       res.objects.append( ros )
     packaging_time = (rospy.Time.now() - then ).to_sec() - descs_time - ros_time- insts_time
 

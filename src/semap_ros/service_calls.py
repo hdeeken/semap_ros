@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import roslib; roslib.load_manifest('semap_ros')
 import rospy
+import roslib; roslib.load_manifest('semap_ros')
 
 from semap_ros.srv import *
 

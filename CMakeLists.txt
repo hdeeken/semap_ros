@@ -1,9 +1,56 @@
-cmake_minimum_required(VERSION 2.4.6)
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+cmake_minimum_required(VERSION 2.8.3)
+project(semap_ros)
 
-rosbuild_init()
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  rospy
+  roslib
+  tf
+  geometry_msgs
+  shape_msgs
+  visualization_msgs
+  semap_msgs
+  semap
+  message_generation
+)
 
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+add_service_files(DIRECTORY srv)
 
-rosbuild_gensrv()
+catkin_python_setup()
+
+generate_messages(
+DEPENDENCIES
+  geometry_msgs
+  shape_msgs
+  visualization_msgs
+  semap_msgs
+)
+
+catkin_package(
+  INCLUDE_DIRS
+  LIBRARIES
+  CATKIN_DEPENDS
+  rospy
+  roscpp
+  roslib
+  tf
+  geometry_msgs
+  shape_msgs
+  visualization_msgs
+  semap_msgs
+  semap
+  message_runtime
+  DEPENDS
+)
+
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+)
+
+install(DIRECTORY launch/ DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
+
+catkin_install_python(PROGRAMS src/test/test_imports.py
+ DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION})
+
+catkin_install_python(PROGRAMS src/nodes/services.py
+ DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
